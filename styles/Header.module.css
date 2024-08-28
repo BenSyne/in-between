@@ -1,0 +1,39 @@
+.header {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.header nav ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.header nav ul li {
+  margin-right: 1rem;
+}
+
+.header nav ul li:last-child {
+  margin-right: 0;
+}
+
+.header a {
+  text-decoration: none;
+  color: #007bff;
+}
+
+.header button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.header button:hover {
+  background-color: #c82333;
+}
