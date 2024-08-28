@@ -3,7 +3,8 @@ import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
 import ChatWindow from '../components/ChatWindow'
 import MessageInput from '../components/MessageInput'
-import UserList from '../components/UserList'
+import FriendList from '../components/FriendList'
+import UserSearch from '../components/UserSearch'
 import RelationshipScore from '../components/RelationshipScore'
 import SuggestionsList from '../components/SuggestionsList'
 import AIChat from '../components/AIChat'
@@ -17,6 +18,7 @@ export default function Chat() {
   const [relationshipScore, setRelationshipScore] = useState(null)
   const [suggestions, setSuggestions] = useState([])
   const [isAIChat, setIsAIChat] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -112,12 +114,12 @@ export default function Chat() {
     }
   }
 
-  const handleSendMessage = async (message, chatHistory = null) => {
+  const handleSendMessage = async (message) => {
     try {
       const token = localStorage.getItem('token')
       const endpoint = isAIChat ? '/api/ai-chat' : '/api/messages'
       const body = isAIChat 
-        ? { message, chatHistory } 
+        ? { message, chatHistory: messages } 
         : { recipientId: selectedUser.id, content: message }
 
       console.log('Sending message:', body);
@@ -133,14 +135,30 @@ export default function Chat() {
       if (response.ok) {
         const newMessage = await response.json()
         console.log('Received response:', newMessage);
-        if (isAIChat) {
-          return newMessage
-        } else {
-          setMessages(prevMessages => [newMessage, ...prevMessages])
-        }
+        setMessages(prevMessages => [newMessage, ...prevMessages])
       }
     } catch (error) {
       console.error('Error sending message:', error)
+    }
+  }
+
+  const handleAddFriend = async (userId) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/friends/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ receiverId: userId }),
+      })
+      if (response.ok) {
+        alert('Friend request sent!')
+        setShowSearch(false)
+      }
+    } catch (error) {
+      console.error('Error sending friend request:', error)
     }
   }
 
@@ -148,7 +166,11 @@ export default function Chat() {
     <Layout>
       <div className={styles.chatContainer}>
         <div className={styles.sidebar}>
-          <UserList users={users} onSelectUser={(user) => { setSelectedUser(user); setIsAIChat(false); }} />
+          <FriendList onSelectFriend={setSelectedUser} />
+          <button onClick={() => setShowSearch(!showSearch)}>
+            {showSearch ? 'Hide Search' : 'Search Users'}
+          </button>
+          {showSearch && <UserSearch onAddFriend={handleAddFriend} />}
           <button className={styles.aiChatButton} onClick={() => { setIsAIChat(true); setSelectedUser(null); }}>
             Chat with AI
           </button>
@@ -167,7 +189,7 @@ export default function Chat() {
           ) : (
             <div className={styles.welcomeMessage}>
               <h2>Welcome to AI-Enhanced Chat</h2>
-              <p>Select a user from the list to start chatting, or try our AI chat feature!</p>
+              <p>Select a friend from the list to start chatting, search for new friends, or try our AI chat feature!</p>
             </div>
           )}
         </div>

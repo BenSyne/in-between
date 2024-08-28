@@ -1,0 +1,41 @@
+.userSearch {
+  margin-bottom: 20px;
+}
+
+.userSearch input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.userSearch button {
+  padding: 8px 16px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.userSearch button:hover {
+  background-color: #45a049;
+}
+
+.userSearch ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.userSearch li {
+  padding: 5px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.userSearch li button {
+  padding: 4px 8px;
+  font-size: 0.8em;
+}
