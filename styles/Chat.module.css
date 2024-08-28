@@ -1,6 +1,39 @@
 .chatContainer {
   display: flex;
-  flex-direction: column;
-  height: 100vh;
+  height: calc(100vh - 60px);
+}
+
+.sidebar {
+  width: 250px;
+  border-right: 1px solid #ccc;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chatMain {
+  flex-grow: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.aiChatButton {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.aiChatButton:hover {
+  background-color: #45a049;
+}
+
+.welcomeMessage {
+  text-align: center;
+  margin-top: 50px;
 }

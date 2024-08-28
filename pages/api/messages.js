@@ -1,8 +1,32 @@
 import { pool } from '../../src/db';
 import { authenticateToken } from '../../src/middleware/auth';
+import { processMessage } from '../../src/utils/openai';
 
 export default async function handler(req, res) {
-  if (req.method === 'GET') {
+  if (req.method === 'POST') {
+    try {
+      const token = req.headers.authorization?.split(' ')[1];
+      const user = await authenticateToken(token);
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { recipientId, content } = req.body;
+
+      // Process the message using OpenAI
+      const processedContent = await processMessage(content);
+
+      const result = await pool.query(
+        'INSERT INTO messages (sender_id, recipient_id, original_content, processed_content) VALUES ($1, $2, $3, $4) RETURNING *',
+        [user.userId, recipientId, content, processedContent]
+      );
+
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      res.status(500).json({ error: 'Error sending message' });
+    }
+  } else if (req.method === 'GET') {
     try {
       const token = req.headers.authorization?.split(' ')[1];
       const user = await authenticateToken(token);
@@ -19,9 +43,6 @@ export default async function handler(req, res) {
       console.error('Error fetching messages:', error);
       res.status(500).json({ error: 'Error fetching messages' });
     }
-  } else if (req.method === 'POST') {
-    // Implement message sending logic here
-    res.status(501).json({ error: 'Not implemented' });
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }

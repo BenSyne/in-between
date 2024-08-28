@@ -1,0 +1,9 @@
+.aiChat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.aiChat h2 {
+  margin-bottom: 20px;
+}

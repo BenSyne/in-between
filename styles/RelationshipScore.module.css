@@ -1,0 +1,16 @@
+.relationshipScore {
+  background-color: #f0f0f0;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.relationshipScore h3 {
+  margin: 0 0 10px 0;
+}
+
+.relationshipScore p {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0;
+}

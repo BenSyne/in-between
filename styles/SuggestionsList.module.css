@@ -1,0 +1,23 @@
+.suggestionsList {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  margin-top: 20px;
+}
+
+.suggestionsList h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.suggestionsList ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.suggestionsList li {
+  margin-bottom: 5px;
+  padding: 5px;
+  background-color: #e9ecef;
+  border-radius: 3px;
+}
