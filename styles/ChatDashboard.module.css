@@ -1,0 +1,101 @@
+.dashboard {
+  display: flex;
+  gap: 2rem;
+  height: calc(100vh - 4rem);
+}
+
+.leftPanel, .rightPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.searchSection {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.searchSection input {
+  flex-grow: 1;
+  padding: 0.5rem;
+  border: 1px solid #bdc3c7;
+  border-radius: 5px;
+}
+
+.searchResults, .pendingInvites, .friendsList {
+  background-color: white;
+  border-radius: 5px;
+  padding: 1rem;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.searchResult, .invite, .friend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.searchResult:last-child, .invite:last-child, .friend:last-child {
+  border-bottom: none;
+}
+
+.aiChat {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.button:hover {
+  background-color: #2980b9;
+}
+
+.chatDashboard {
+  display: flex;
+  height: calc(100vh - 60px); /* Adjust based on your header height */
+  background-color: #f5f5f5;
+}
+
+.sidebar {
+  width: 300px;
+  background-color: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  overflow-y: auto;
+}
+
+.chatArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.welcomeMessage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #757575;
+}
+
+.welcomeMessage h2 {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.welcomeMessage p {
+  font-size: 16px;
+}

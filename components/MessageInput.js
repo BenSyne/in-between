@@ -18,7 +18,7 @@ export default function MessageInput({ onSendMessage }) {
         type="text"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="Type your message..."
+        placeholder="Type a message..."
       />
       <button type="submit">Send</button>
     </form>

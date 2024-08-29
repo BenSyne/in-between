@@ -1,26 +1,30 @@
 .messageInput {
   display: flex;
-  margin-top: 20px;
+  padding: 15px;
+  background-color: #ffffff;
+  border-top: 1px solid #e0e0e0;
 }
 
 .messageInput input {
   flex-grow: 1;
   padding: 10px;
   font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 4px 0 0 4px;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  margin-right: 10px;
 }
 
 .messageInput button {
   padding: 10px 20px;
   font-size: 16px;
-  background-color: #0070f3;
+  background-color: #3498db;
   color: white;
   border: none;
-  border-radius: 0 4px 4px 0;
+  border-radius: 20px;
   cursor: pointer;
+  transition: background-color 0.3s;
 }
 
 .messageInput button:hover {
-  background-color: #0051bb;
+  background-color: #2980b9;
 }

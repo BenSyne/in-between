@@ -7,17 +7,18 @@ const AIChat = ({ onSendMessage }) => {
   const [messages, setMessages] = useState([])
 
   const handleSendMessage = async (content) => {
-    console.log('Sending user message:', content);
-
+    const userProfileData = JSON.parse(localStorage.getItem('userProfileAnswers')) || {};
+    
     const userMessage = {
       id: Date.now(),
       sender_id: 'user',
       content: content,
       sent_at: new Date().toISOString(),
+      userProfile: userProfileData, // Include user profile data
     }
     setMessages(prevMessages => [...prevMessages, userMessage]);
     
-    const aiResponse = await onSendMessage(content, messages)
+    const aiResponse = await onSendMessage(content, messages, userProfileData);
     console.log('Received AI response:', aiResponse);
 
     if (aiResponse) {

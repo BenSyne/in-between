@@ -12,12 +12,12 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const { message, chatHistory } = req.body;
+      const { message, chatHistory, userProfile } = req.body;
 
-      console.log('Processing message with chat history:', { message, chatHistory });
+      console.log('Processing message with chat history and user profile:', { message, chatHistory, userProfile });
 
-      // Process the message using OpenAI, including chat history
-      const processedContent = await processMessage(message, chatHistory);
+      // Process the message using OpenAI, including chat history and user profile
+      const processedContent = await processMessage(message, chatHistory, userProfile);
 
       console.log('Processed content:', processedContent);
 

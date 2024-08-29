@@ -25,7 +25,11 @@ export default async function handler(req, res) {
       res.json(result.rows);
     } catch (error) {
       console.error('Error fetching messages:', error);
-      res.status(500).json({ error: 'Error fetching messages' });
+      if (error.code === '42703') {
+        res.status(500).json({ error: 'Database schema error: Missing column in messages table' });
+      } else {
+        res.status(500).json({ error: 'Error fetching messages' });
+      }
     }
   } else {
     res.status(405).json({ error: 'Method not allowed' });

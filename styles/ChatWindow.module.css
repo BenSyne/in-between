@@ -1,16 +1,47 @@
 .chatWindow {
-  height: 400px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.chatHeader .userAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #3498db;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.chatHeader h2 {
+  font-size: 18px;
+  color: #424242;
+}
+
+.messageList {
+  flex: 1;
   overflow-y: auto;
-  border: 1px solid #ccc;
-  padding: 10px;
-  margin-bottom: 20px;
+  padding: 20px;
 }
 
 .message {
-  margin-bottom: 10px;
-  padding: 5px 10px;
-  border-radius: 5px;
   max-width: 70%;
+  margin-bottom: 15px;
+  padding: 10px;
+  border-radius: 18px;
+  position: relative;
 }
 
 .sent {
@@ -20,17 +51,18 @@
 }
 
 .received {
-  background-color: #f1f0f0;
+  background-color: #ffffff;
   align-self: flex-start;
 }
 
 .message p {
   margin: 0;
+  color: #424242;
 }
 
 .message small {
   display: block;
-  font-size: 0.8em;
-  color: #888;
-  text-align: right;
+  font-size: 0.7em;
+  color: #757575;
+  margin-top: 5px;
 }
