@@ -85,6 +85,9 @@ export default function ProfileEdit() {
     <div className={styles.container}>
       <h1 className={styles.title}>{profileData ? 'Edit Profile' : 'Create Profile'}</h1>
       <UserProfileQuestionnaire initialData={profileData} onComplete={handleProfileUpdate} />
+      <button className={styles.cancelButton} onClick={() => router.push('/profile')}>
+        Cancel
+      </button>
     </div>
   );
 }

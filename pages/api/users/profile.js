@@ -10,7 +10,8 @@ export default async function handler(req, res) {
       if (result.rows.length > 0) {
         res.json(result.rows[0]);
       } else {
-        res.status(404).json({ error: 'Profile not found' });
+        // If no profile is found, return the basic user data
+        res.json({ userId: req.user.userId, email: req.user.email });
       }
     } else if (req.method === 'PUT') {
       // ... (existing PUT logic)

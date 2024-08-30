@@ -55,11 +55,18 @@ export default function Profile() {
     <div className={styles.container}>
       <h1 className={styles.title}>My Profile</h1>
       {profileData ? (
-        <UserProfile profileData={profileData} />
+        <>
+          <UserProfile profileData={profileData} />
+          <button className={styles.editButton} onClick={() => router.push('/profile/edit')}>
+            Edit Profile
+          </button>
+        </>
       ) : (
-        <div>
+        <div className={styles.emptyProfile}>
           <p>You haven't created a profile yet.</p>
-          <button onClick={() => router.push('/profile/edit')}>Create Profile</button>
+          <button className={styles.createButton} onClick={() => router.push('/profile/edit')}>
+            Create Profile
+          </button>
         </div>
       )}
     </div>
