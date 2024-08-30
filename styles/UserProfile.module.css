@@ -1,0 +1,14 @@
+.profile {
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.profileItem {
+  margin-bottom: 10px;
+}
+
+.profileItem strong {
+  font-weight: bold;
+  margin-right: 10px;
+}

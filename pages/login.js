@@ -9,27 +9,27 @@ export default function Login() {
   const router = useRouter()
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError('');
 
     try {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-      })
+      });
 
       if (response.ok) {
-        const data = await response.json()
-        localStorage.setItem('token', data.token)
-        router.push('/chat')
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        router.push('/profile-settings');
       } else {
-        setError('Invalid email or password')
+        setError('Invalid email or password');
       }
     } catch (error) {
-      setError('An error occurred. Please try again.')
+      setError('An error occurred. Please try again.');
     }
-  }
+  };
 
   return (
     <div className={styles.container}>

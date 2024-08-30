@@ -17,13 +17,13 @@ export default async function handler(req, res) {
 
       // Update the friend request status
       const updateResult = await pool.query(
-        'UPDATE friend_requests SET status = $1 WHERE id = $2 AND receiver_id = $3 RETURNING sender_id',
-        ['accepted', requestId, user.userId]
+        'UPDATE friendships SET status = $1 WHERE (user1_id = $2 AND user2_id = $3) OR (user1_id = $3 AND user2_id = $2) RETURNING id',
+        ['accepted', user.userId, senderId]
       );
 
       if (updateResult.rows.length === 0) {
         await pool.query('ROLLBACK');
-        return res.status(404).json({ error: 'Friend request not found' });
+        return res.status(404).json({ error: 'Friendship not found' });
       }
 
       const senderId = updateResult.rows[0].sender_id;

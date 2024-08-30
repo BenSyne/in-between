@@ -19,6 +19,14 @@ async function tableExists(client, tableName) {
   return result.rows[0].exists;
 }
 
+async function indexExists(client, indexName) {
+  const result = await client.query(
+    "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = $1)",
+    [indexName]
+  );
+  return result.rows[0].exists;
+}
+
 async function runMigration() {
   let client;
   try {
@@ -39,12 +47,23 @@ async function runMigration() {
 
     for (let statement of statements) {
       // Extract table name from CREATE TABLE statements
-      const match = statement.match(/CREATE TABLE (\w+)/i);
-      if (match) {
-        const tableName = match[1];
+      const tableMatch = statement.match(/CREATE TABLE (\w+)/i);
+      if (tableMatch) {
+        const tableName = tableMatch[1];
         const exists = await tableExists(client, tableName);
         if (exists) {
           console.log(`Table ${tableName} already exists, skipping...`);
+          continue;
+        }
+      }
+
+      // Extract index name from CREATE INDEX statements
+      const indexMatch = statement.match(/CREATE INDEX (\w+)/i);
+      if (indexMatch) {
+        const indexName = indexMatch[1];
+        const exists = await indexExists(client, indexName);
+        if (exists) {
+          console.log(`Index ${indexName} already exists, skipping...`);
           continue;
         }
       }

@@ -47,3 +47,18 @@
   margin-top: 20px;
   font-style: italic;
 }
+
+.autoCompleteButton {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.autoCompleteButton:hover {
+  background-color: #45a049;
+}

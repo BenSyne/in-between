@@ -7,14 +7,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    const user = await authenticateToken(token);
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No authorization header provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const user = await new Promise((resolve, reject) => {
+      authenticateToken(req, res, (err) => {
+        if (err) reject(err);
+        resolve(req.user);
+      });
+    });
+
     if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Invalid token' });
     }
 
     const result = await pool.query(
-      'SELECT id, username, email, created_at, last_login FROM users WHERE id = $1',
+      'SELECT id, username, email, created_at, COALESCE(last_login, created_at) as last_login FROM users WHERE id = $1',
       [user.userId]
     );
 
