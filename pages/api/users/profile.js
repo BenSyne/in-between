@@ -21,7 +21,7 @@ export default async function handler(req, res) {
         res.json(userResult.rows[0]);
       }
     } else if (req.method === 'PUT') {
-      const profileData = req.body;
+      const { email, username, ...profileData } = req.body;
       
       // Remove user_id from profileData if it exists
       const { user_id, ...cleanProfileData } = profileData;
@@ -31,10 +31,21 @@ export default async function handler(req, res) {
       try {
         await client.query('BEGIN');
         
-        // Prepare data for upsert
+        // Update user table
+        if (email || username) {
+          const userUpdateQuery = `
+            UPDATE users
+            SET ${email ? 'email = $1' : ''} ${email && username ? ',' : ''} ${username ? 'username = $2' : ''}
+            WHERE id = $3
+          `;
+          const userUpdateValues = [email, username, req.user.userId].filter(v => v !== undefined);
+          await client.query(userUpdateQuery, userUpdateValues);
+        }
+        
+        // Prepare data for upsert in user_profiles
         const columns = Object.keys(cleanProfileData);
         const values = Object.values(cleanProfileData).map(value => 
-          Array.isArray(value) ? `{${value.map(item => `"${item}"`).join(',')}}` : value
+          Array.isArray(value) ? `{${value.map(item => `"${item.replace(/"/g, '\\"')}"`).join(',')}}` : value
         );
         
         // Generate placeholders for the query
