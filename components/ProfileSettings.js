@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import UserProfileQuestionnaire from '../components/UserProfileQuestionnaire';
-import UserProfile from '../components/UserProfile';
+import UserProfileQuestionnaire from './UserProfileQuestionnaire';
+import UserProfile from './UserProfile';
 import styles from '../styles/ProfileSettings.module.css';
 import getConfig from 'next/config';
-import { useRouter } from 'next/router';
 
 const { publicRuntimeConfig } = getConfig();
 
@@ -11,36 +10,38 @@ const ProfileSettings = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const router = useRouter();
 
   useEffect(() => {
-    console.log('ProfileSettings component mounted');
     fetchProfileData();
   }, []);
 
   const fetchProfileData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5001/api/users/profile', {
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      const response = await fetch(`${publicRuntimeConfig.apiUrl}/users/profile`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error(`Error fetching profile: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Error fetching profile: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('Profile data:', data);
       setProfileData(data);
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      setError(`Error fetching profile: ${error.message}`);
+      console.error('Error fetching profile data:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -49,8 +50,8 @@ const ProfileSettings = () => {
   const handleQuestionnaireComplete = async (answers) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${publicRuntimeConfig.apiUrl}/profile`, {
-        method: 'POST',
+      const response = await fetch(`${publicRuntimeConfig.apiUrl}/users/profile`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -59,16 +60,15 @@ const ProfileSettings = () => {
       });
 
       if (response.ok) {
-        console.log('Profile created successfully');
-        fetchProfileData(); // Refresh profile data
+        const data = await response.json();
+        setProfileData(data);
       } else {
         const errorText = await response.text();
-        console.error('Error creating profile:', errorText);
-        setError(`Error creating profile: ${errorText}`);
+        throw new Error(`Error updating profile: ${response.status} ${errorText}`);
       }
     } catch (error) {
       console.error('Error submitting questionnaire:', error);
-      setError(`Error submitting questionnaire: ${error.message}`);
+      setError(error.message);
     }
   };
 
@@ -77,7 +77,12 @@ const ProfileSettings = () => {
   }
 
   if (error) {
-    return <div className={styles.error}>{error}</div>;
+    return (
+      <div className={styles.error}>
+        <p>Error: {error}</p>
+        <button onClick={fetchProfileData}>Retry</button>
+      </div>
+    );
   }
 
   return (

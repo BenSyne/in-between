@@ -2,10 +2,8 @@ import React from 'react';
 import styles from '../styles/UserProfile.module.css';
 
 const UserProfile = ({ profileData }) => {
-  console.log('Rendering UserProfile with data:', profileData);
-
   if (!profileData) {
-    return <div>No profile data available.</div>;
+    return <div className={styles.error}>No profile data available.</div>;
   }
 
   return (

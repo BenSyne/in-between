@@ -1,8 +1,14 @@
 module.exports = {
-  serverRuntimeConfig: {
-    apiUrl: 'http://localhost:5001',
-  },
+  reactStrictMode: true,
   publicRuntimeConfig: {
-    apiUrl: process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5001/api',
+    apiUrl: 'http://localhost:5001/api',
   },
-}
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:5001/api/:path*',
+      },
+    ];
+  },
+};

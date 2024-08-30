@@ -4,17 +4,16 @@ const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (token == null) {
-    console.log('No token provided');
-    return res.sendStatus(401);
+  if (!token) {
+    return res.status(401).json({ error: 'No authentication token provided' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key_here';
+  jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
       console.error('Token verification error:', err);
-      return res.sendStatus(403);
+      return res.status(403).json({ error: 'Invalid or expired token' });
     }
-    console.log('Token verified successfully, user:', user);
     req.user = user;
     next();
   });

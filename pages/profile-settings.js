@@ -20,26 +20,34 @@ const ProfileSettings = () => {
 
   const fetchProfileData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('token');
-      console.log('Token:', token);
-      const response = await fetch('http://localhost:5001/api/users/profile', {
+      console.log('Token from localStorage:', token ? 'Token exists' : 'No token');
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      console.log('Fetching profile data...');
+      const response = await fetch(`${publicRuntimeConfig.apiUrl}/users/profile`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
       });
 
+      console.log('Profile data response status:', response.status);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Error fetching profile: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('Profile data:', data);
       setProfileData(data);
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error fetching profile data:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -47,11 +55,11 @@ const ProfileSettings = () => {
   };
 
   const handleQuestionnaireComplete = async (answers) => {
-    console.log('Questionnaire completed with answers:', answers);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${publicRuntimeConfig.apiUrl}/profile`, {
-        method: 'POST',
+      console.log('Submitting questionnaire answers:', answers);
+      const response = await fetch(`${publicRuntimeConfig.apiUrl}/users/profile`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -59,17 +67,17 @@ const ProfileSettings = () => {
         body: JSON.stringify(answers)
       });
 
+      console.log('Questionnaire submission response status:', response.status);
       if (response.ok) {
-        console.log('Profile created successfully');
+        console.log('Profile updated successfully');
         fetchProfileData(); // Refresh profile data
       } else {
         const errorText = await response.text();
-        console.error('Error creating profile:', errorText);
-        setError(`Error creating profile: ${errorText}`);
+        throw new Error(`Error updating profile: ${response.status} ${errorText}`);
       }
     } catch (error) {
       console.error('Error submitting questionnaire:', error);
-      setError(`Error submitting questionnaire: ${error.message}`);
+      setError(error.message);
     }
   };
 
@@ -80,14 +88,24 @@ const ProfileSettings = () => {
   }
 
   if (error) {
-    return <div className={styles.error}>{error}</div>;
+    return (
+      <div className={styles.error}>
+        <p>Error: {error}</p>
+        <button onClick={fetchProfileData}>Retry</button>
+      </div>
+    );
   }
+
+  const showQuestionnaire = !profileData || Object.keys(profileData).length === 0;
 
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Profile Settings</h1>
-      {!profileData ? (
-        <UserProfileQuestionnaire onComplete={handleQuestionnaireComplete} />
+      {showQuestionnaire ? (
+        <div>
+          <p>We need some information to complete your profile.</p>
+          <UserProfileQuestionnaire onComplete={handleQuestionnaireComplete} />
+        </div>
       ) : (
         <UserProfile profileData={profileData} />
       )}
