@@ -3,19 +3,15 @@ import styles from '../styles/UserProfileQuestionnaire.module.css';
 
 const UserProfileQuestionnaire = ({ initialData, onComplete }) => {
   const [formData, setFormData] = useState(initialData || {});
-  const [currentStep, setCurrentStep] = useState(0);
 
-  const multiChoiceQuestions = [
+  const questions = [
     { name: 'learning_style', label: 'Learning Style', type: 'select', options: ['visual', 'auditory', 'kinesthetic', 'combination'] },
     { name: 'learning_disabilities', label: 'Learning Disabilities', type: 'select', options: ['none', 'yes', 'prefer_not_to_say', 'possibly'] },
     { name: 'adhd', label: 'ADHD', type: 'select', options: ['not_tested', 'tested_positive', 'tested_negative', 'suspect_positive'] },
-    { name: 'focus_issues', label: 'Focus Issues', type: 'select', options: ['no', 'yes', 'sometimes', 'topic_dependent'] },
-    { name: 'reaction_to_failure', label: 'Reaction to Failure', type: 'select', options: ['learn_from_experience', 'analyze_and_improve', 'upset', 'see_as_challenge'] },
-    { name: 'attitude_towards_winning_losing', label: 'Attitude Towards Winning/Losing', type: 'select', options: ['winning_important', 'focus_on_learning', 'enjoy_competition', 'avoid_losing'] },
-    { name: 'therapy_experience', label: 'Therapy Experience', type: 'select', options: ['none', 'curious', 'positive', 'negative'] },
-  ];
-
-  const otherQuestions = [
+    { name: 'focus_issues', label: 'Focus Issues', type: 'select', options: ['rarely', 'sometimes', 'often', 'always'] },
+    { name: 'reaction_to_failure', label: 'Reaction to Failure', type: 'select', options: ['give_up', 'try_again', 'learn_from_experience', 'seek_help'] },
+    { name: 'attitude_towards_winning_losing', label: 'Attitude Towards Winning/Losing', type: 'select', options: ['highly_competitive', 'balanced', 'focus_on_learning', 'indifferent'] },
+    { name: 'therapy_experience', label: 'Therapy Experience', type: 'select', options: ['never', 'past', 'current', 'curious'] },
     { name: 'emotional_intelligence_understanding', label: 'Emotional Intelligence Understanding', type: 'textarea' },
     { name: 'emotional_intelligence_hours_spent', label: 'Hours Spent on Emotional Intelligence', type: 'number' },
     { name: 'core_values', label: 'Core Values', type: 'text', isArray: true },
@@ -53,14 +49,6 @@ const UserProfileQuestionnaire = ({ initialData, onComplete }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     onComplete(formData);
-  };
-
-  const nextStep = () => {
-    setCurrentStep(prev => Math.min(prev + 1, otherQuestions.length));
-  };
-
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
   const renderQuestion = (question) => {
@@ -161,39 +149,15 @@ const UserProfileQuestionnaire = ({ initialData, onComplete }) => {
       <button type="button" onClick={autofillTestData} className={styles.autofillButton}>
         Autofill Test Data
       </button>
-      {currentStep === 0 && (
-        <div className={styles.multiChoiceSection}>
-          <h2>Multiple Choice Questions</h2>
-          {multiChoiceQuestions.map((question) => (
-            <div key={question.name} className={styles.questionCard}>
-              <h3>{question.label}</h3>
-              {renderQuestion(question)}
-            </div>
-          ))}
+      {questions.map((question) => (
+        <div key={question.name} className={styles.questionCard}>
+          <h3>{question.label}</h3>
+          {renderQuestion(question)}
         </div>
-      )}
-      {currentStep > 0 && (
-        <div className={styles.questionCard}>
-          <h3>{otherQuestions[currentStep - 1].label}</h3>
-          {renderQuestion(otherQuestions[currentStep - 1])}
-        </div>
-      )}
-      <div className={styles.navigation}>
-        {currentStep > 0 && (
-          <button type="button" onClick={prevStep} className={styles.navButton}>
-            Previous
-          </button>
-        )}
-        {currentStep < otherQuestions.length ? (
-          <button type="button" onClick={nextStep} className={styles.navButton}>
-            Next
-          </button>
-        ) : (
-          <button type="submit" className={styles.submitButton}>
-            {initialData ? 'Update Profile' : 'Create Profile'}
-          </button>
-        )}
-      </div>
+      ))}
+      <button type="submit" className={styles.submitButton}>
+        {initialData ? 'Update Profile' : 'Create Profile'}
+      </button>
     </form>
   );
 };
