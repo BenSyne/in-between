@@ -51,6 +51,8 @@ export default function Profile() {
     return <div className={styles.error}>{error}</div>;
   }
 
+  const hasDetailedProfile = profileData && (profileData.learning_style || profileData.learning_disabilities);
+
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>My Profile</h1>
@@ -58,12 +60,12 @@ export default function Profile() {
         <>
           <UserProfile profileData={profileData} />
           <button className={styles.editButton} onClick={() => router.push('/profile/edit')}>
-            Edit Profile
+            {hasDetailedProfile ? 'Edit Profile' : 'Complete Profile'}
           </button>
         </>
       ) : (
         <div className={styles.emptyProfile}>
-          <p>You haven't created a profile yet.</p>
+          <p>We couldn't find your profile information.</p>
           <button className={styles.createButton} onClick={() => router.push('/profile/edit')}>
             Create Profile
           </button>
