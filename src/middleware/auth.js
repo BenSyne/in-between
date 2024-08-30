@@ -6,17 +6,17 @@ const authenticateToken = (req, res, next) => {
 
   if (token == null) {
     console.log('No token provided');
-    return res.status(401).json({ error: 'No token provided' });
+    return res.sendStatus(401);
   }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       console.error('Token verification error:', err);
-      return res.status(403).json({ error: 'Invalid token' });
+      return res.sendStatus(403);
     }
     console.log('Token verified successfully, user:', user);
     req.user = user;
-    if (next) next();
+    next();
   });
 };
 

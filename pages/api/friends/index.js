@@ -17,31 +17,21 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const user = await new Promise((resolve, reject) => {
-      authenticateToken(req, res, (err) => {
-        if (err) reject(err);
-        resolve(req.user);
-      });
-    });
-
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    // Fetch friends logic here
     try {
+      const user = await authenticateToken(token);
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+
+      // Fetch friends logic here
       const result = await pool.query(
         'SELECT u.id, u.username FROM users u INNER JOIN friendships f ON (u.id = f.user1_id OR u.id = f.user2_id) WHERE (f.user1_id = $1 OR f.user2_id = $1) AND f.status = $2',
         [user.userId, 'accepted']
       );
       res.json(result.rows);
-    } catch (dbError) {
-      if (dbError.code === '42P01') { // Table does not exist
-        console.log('Friendships table does not exist yet. Returning empty array.');
-        res.json([]);
-      } else {
-        throw dbError;
-      }
+    } catch (authError) {
+      console.error('Authentication error:', authError);
+      return res.status(401).json({ error: 'Authentication failed' });
     }
   } catch (error) {
     console.error('Error fetching friends:', error);

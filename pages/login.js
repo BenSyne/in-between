@@ -21,12 +21,19 @@ export default function Login() {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('token', data.token);
-        router.push('/profile-settings');
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          console.log('Token set in localStorage:', data.token);
+          router.push('/profile-settings');
+        } else {
+          setError('No token received from server');
+        }
       } else {
-        setError('Invalid email or password');
+        const errorData = await response.json();
+        setError(errorData.error || 'Invalid email or password');
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError('An error occurred. Please try again.');
     }
   };

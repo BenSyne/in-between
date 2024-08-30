@@ -8,61 +8,72 @@ import { useRouter } from 'next/router';
 const { publicRuntimeConfig } = getConfig();
 
 const ProfileSettings = () => {
-  const [showProfile, setShowProfile] = useState(false);
-  const [profileExists, setProfileExists] = useState(false);
-  const [error, setError] = useState(null);
+  const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
-    checkProfileExists();
+    console.log('ProfileSettings component mounted');
+    fetchProfileData();
   }, []);
 
-  const checkProfileExists = async () => {
+  const fetchProfileData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found');
-        setError('No authentication token found. Please log in again.');
-        router.push('/login');
-        return;
-      }
-      console.log('Fetching profile from:', `${publicRuntimeConfig.apiUrl}/profile`);
-      const response = await fetch(`${publicRuntimeConfig.apiUrl}/profile`, {
-        headers: { 
+      console.log('Token:', token);
+      const response = await fetch('http://localhost:5001/api/users/profile', {
+        method: 'GET',
+        headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
-      console.log('Response status:', response.status);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Profile data:', data);
-        setProfileExists(true);
-        setShowProfile(true);
-      } else if (response.status === 404) {
-        console.log('Profile not found');
-        setProfileExists(false);
-        setShowProfile(false);
-      } else {
-        const errorText = await response.text();
-        console.error('Error checking profile:', errorText);
-        setError(`Error checking profile: ${errorText}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json();
+      setProfileData(data);
     } catch (error) {
-      console.error('Error checking profile:', error);
-      setError(`Error checking profile: ${error.message}`);
+      console.error('Error fetching profile:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
-      console.log('Profile check completed');
     }
   };
 
-  const handleQuestionnaireComplete = () => {
-    setShowProfile(true);
-    setProfileExists(true);
+  const handleQuestionnaireComplete = async (answers) => {
+    console.log('Questionnaire completed with answers:', answers);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${publicRuntimeConfig.apiUrl}/profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(answers)
+      });
+
+      if (response.ok) {
+        console.log('Profile created successfully');
+        fetchProfileData(); // Refresh profile data
+      } else {
+        const errorText = await response.text();
+        console.error('Error creating profile:', errorText);
+        setError(`Error creating profile: ${errorText}`);
+      }
+    } catch (error) {
+      console.error('Error submitting questionnaire:', error);
+      setError(`Error submitting questionnaire: ${error.message}`);
+    }
   };
+
+  console.log('Rendering ProfileSettings. Loading:', loading, 'Error:', error, 'ProfileData:', profileData);
 
   if (loading) {
     return <div className={styles.loading}>Loading...</div>;
@@ -75,16 +86,10 @@ const ProfileSettings = () => {
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Profile Settings</h1>
-      {!showProfile || !profileExists ? (
+      {!profileData ? (
         <UserProfileQuestionnaire onComplete={handleQuestionnaireComplete} />
       ) : (
-        <UserProfile />
-      )}
-      {profileExists && !showProfile && (
-        <button onClick={() => setShowProfile(true)}>View Profile</button>
-      )}
-      {showProfile && (
-        <button onClick={() => setShowProfile(false)}>Edit Profile</button>
+        <UserProfile profileData={profileData} />
       )}
     </div>
   );
