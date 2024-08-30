@@ -1,13 +1,15 @@
 import React from 'react';
 import Layout from '../components/Layout';
-import '../styles/globals.css';
 import Header from '../components/Header';
+import '../styles/globals.css';
 
 function MyApp({ Component, pageProps }) {
   return (
     <>
       <Header />
-      <Component {...pageProps} />
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
     </>
   );
 }

@@ -1,41 +1,49 @@
 .container {
-  padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
 }
 
 .title {
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  color: var(--text-color);
 }
 
 .loading, .error {
   text-align: center;
   font-size: 1.2rem;
   margin-top: 2rem;
+  color: var(--secondary-text-color);
 }
 
 .error {
-  color: red;
+  color: #FF3B30;
 }
 
 .editButton, .createButton {
-  display: block;
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  background-color: #0070f3;
+  display: inline-block;
+  margin-top: 2rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color);
   color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  border-radius: 8px;
   font-size: 1rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
 }
 
 .editButton:hover, .createButton:hover {
-  background-color: #0051a2;
+  background-color: #0056b3;
 }
 
 .emptyProfile {
   text-align: center;
-  margin-top: 2rem;
+  margin-top: 4rem;
+}
+
+.emptyProfile p {
+  font-size: 1.2rem;
+  color: var(--secondary-text-color);
+  margin-bottom: 2rem;
 }

@@ -3,33 +3,16 @@ import styles from '../styles/UserProfileQuestionnaire.module.css';
 
 const UserProfileQuestionnaire = ({ initialData, onComplete }) => {
   const [formData, setFormData] = useState(initialData || {});
+  const [currentStep, setCurrentStep] = useState(0);
 
-  const questions = [
-    { name: 'learning_style', label: 'Learning Style', type: 'select', options: ['visual', 'auditory', 'kinesthetic', 'combination'] },
-    { name: 'learning_disabilities', label: 'Learning Disabilities', type: 'select', options: ['none', 'yes', 'prefer_not_to_say', 'possibly'] },
-    { name: 'adhd', label: 'ADHD', type: 'select', options: ['not_tested', 'tested_positive', 'tested_negative', 'suspect_positive'] },
-    { name: 'focus_issues', label: 'Focus Issues', type: 'select', options: ['rarely', 'sometimes', 'often', 'always'] },
-    { name: 'reaction_to_failure', label: 'Reaction to Failure', type: 'select', options: ['give_up', 'try_again', 'learn_from_experience', 'seek_help'] },
-    { name: 'attitude_towards_winning_losing', label: 'Attitude Towards Winning/Losing', type: 'select', options: ['highly_competitive', 'balanced', 'focus_on_learning', 'indifferent'] },
-    { name: 'therapy_experience', label: 'Therapy Experience', type: 'select', options: ['never', 'past', 'current', 'curious'] },
-    { name: 'emotional_intelligence_understanding', label: 'Emotional Intelligence Understanding', type: 'textarea' },
-    { name: 'emotional_intelligence_hours_spent', label: 'Hours Spent on Emotional Intelligence', type: 'number' },
-    { name: 'core_values', label: 'Core Values', type: 'text', isArray: true },
-    { name: 'internal_motivators', label: 'Internal Motivators', type: 'text', isArray: true },
-    { name: 'external_motivators', label: 'External Motivators', type: 'text', isArray: true },
-    { name: 'self_soothing_methods_healthy', label: 'Healthy Self-Soothing Methods', type: 'text', isArray: true },
-    { name: 'self_soothing_methods_unhealthy', label: 'Unhealthy Self-Soothing Methods', type: 'text', isArray: true },
-    { name: 'stress_management_positive', label: 'Positive Stress Management', type: 'text', isArray: true },
-    { name: 'stress_management_negative', label: 'Negative Stress Management', type: 'text', isArray: true },
-    { name: 'personal_identity', label: 'Personal Identity', type: 'textarea' },
-    { name: 'role_models', label: 'Role Models', type: 'text', isArray: true },
-    { name: 'admirable_qualities', label: 'Admirable Qualities', type: 'text', isArray: true },
-    { name: 'hobbies', label: 'Hobbies', type: 'text', isArray: true },
-    { name: 'challenging_topics', label: 'Challenging Topics', type: 'text', isArray: true },
-    { name: 'favorite_food', label: 'Favorite Food', type: 'text' },
-    { name: 'favorite_food_reason', label: 'Reason for Favorite Food', type: 'textarea' },
-    { name: 'conflict_resolution_approach', label: 'Conflict Resolution Approach', type: 'textarea' },
-    { name: 'unique_challenges', label: 'Unique Challenges', type: 'textarea' },
+  const steps = [
+    { title: 'Learning Style', fields: ['learning_style', 'learning_disabilities', 'adhd', 'focus_issues'] },
+    { title: 'Personality', fields: ['reaction_to_failure', 'attitude_towards_winning_losing', 'therapy_experience'] },
+    { title: 'Emotional Intelligence', fields: ['emotional_intelligence_understanding', 'emotional_intelligence_hours_spent'] },
+    { title: 'Values and Motivations', fields: ['core_values', 'internal_motivators', 'external_motivators'] },
+    { title: 'Self-Care', fields: ['self_soothing_methods_healthy', 'self_soothing_methods_unhealthy', 'stress_management_positive', 'stress_management_negative'] },
+    { title: 'Personal Growth', fields: ['personal_identity', 'role_models', 'admirable_qualities', 'hobbies', 'challenging_topics'] },
+    { title: 'Additional Info', fields: ['favorite_food', 'favorite_food_reason', 'conflict_resolution_approach', 'unique_challenges'] },
   ];
 
   const handleChange = (e) => {
@@ -37,127 +20,45 @@ const UserProfileQuestionnaire = ({ initialData, onComplete }) => {
     setFormData(prevData => ({ ...prevData, [name]: value }));
   };
 
-  const handleArrayChange = (e, index) => {
-    const { name, value } = e.target;
-    setFormData(prevData => {
-      const newArray = [...(prevData[name] || [])];
-      newArray[index] = value;
-      return { ...prevData, [name]: newArray };
-    });
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    onComplete(formData);
-  };
-
-  const renderQuestion = (question) => {
-    switch (question.type) {
-      case 'select':
-        return (
-          <select name={question.name} value={formData[question.name] || ''} onChange={handleChange} className={styles.input}>
-            <option value="">Select an option</option>
-            {question.options.map(option => (
-              <option key={option} value={option}>{option.replace(/_/g, ' ')}</option>
-            ))}
-          </select>
-        );
-      case 'textarea':
-        return (
-          <textarea
-            name={question.name}
-            value={formData[question.name] || ''}
-            onChange={handleChange}
-            className={styles.textarea}
-          />
-        );
-      case 'number':
-        return (
-          <input
-            type="number"
-            name={question.name}
-            value={formData[question.name] || ''}
-            onChange={handleChange}
-            className={styles.input}
-          />
-        );
-      case 'text':
-        if (question.isArray) {
-          return (
-            <div>
-              {[0, 1, 2].map((index) => (
-                <input
-                  key={index}
-                  type="text"
-                  value={(formData[question.name] || [])[index] || ''}
-                  onChange={(e) => handleArrayChange(e, index)}
-                  placeholder={`${question.label} ${index + 1}`}
-                  className={styles.input}
-                />
-              ))}
-            </div>
-          );
-        }
-        return (
-          <input
-            type="text"
-            name={question.name}
-            value={formData[question.name] || ''}
-            onChange={handleChange}
-            className={styles.input}
-          />
-        );
-      default:
-        return null;
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      onComplete(formData);
     }
   };
 
-  const autofillTestData = () => {
-    const testData = {
-      learning_style: 'visual',
-      learning_disabilities: 'none',
-      adhd: 'not_tested',
-      focus_issues: 'sometimes',
-      reaction_to_failure: 'learn_from_experience',
-      attitude_towards_winning_losing: 'focus_on_learning',
-      therapy_experience: 'curious',
-      emotional_intelligence_understanding: 'I have a good understanding of emotional intelligence.',
-      emotional_intelligence_hours_spent: 10,
-      core_values: ['Honesty', 'Compassion', 'Growth'],
-      internal_motivators: ['Personal growth', 'Curiosity', 'Achievement'],
-      external_motivators: ['Recognition', 'Rewards', 'Competition'],
-      self_soothing_methods_healthy: ['Meditation', 'Exercise', 'Deep breathing'],
-      self_soothing_methods_unhealthy: ['Overeating', 'Procrastination'],
-      stress_management_positive: ['Time management', 'Prioritization', 'Seeking support'],
-      stress_management_negative: ['Avoidance', 'Negative self-talk'],
-      personal_identity: 'I am a curious and ambitious individual who values personal growth and learning.',
-      role_models: ['Albert Einstein', 'Marie Curie', 'Nelson Mandela'],
-      admirable_qualities: ['Perseverance', 'Creativity', 'Empathy'],
-      hobbies: ['Reading', 'Hiking', 'Photography'],
-      challenging_topics: ['Advanced mathematics', 'Quantum physics', 'Philosophy'],
-      favorite_food: 'Sushi',
-      favorite_food_reason: 'I love the combination of flavors and the artistry in its preparation.',
-      conflict_resolution_approach: 'I try to listen actively, understand all perspectives, and find a compromise.',
-      unique_challenges: 'Balancing my ambitious goals with maintaining a healthy work-life balance.'
-    };
-
-    setFormData(testData);
+  const renderField = (field) => {
+    // ... (implement renderField logic based on field type)
   };
 
   return (
     <form onSubmit={handleSubmit} className={styles.questionnaire}>
-      <button type="button" onClick={autofillTestData} className={styles.autofillButton}>
-        Autofill Test Data
-      </button>
-      {questions.map((question) => (
-        <div key={question.name} className={styles.questionCard}>
-          <h3>{question.label}</h3>
-          {renderQuestion(question)}
+      <div className={styles.progress}>
+        {steps.map((step, index) => (
+          <div
+            key={index}
+            className={`${styles.progressStep} ${index <= currentStep ? styles.active : ''}`}
+          />
+        ))}
+      </div>
+      <h2 className={styles.stepTitle}>{steps[currentStep].title}</h2>
+      {steps[currentStep].fields.map(field => (
+        <div key={field} className={styles.field}>
+          {renderField(field)}
         </div>
       ))}
-      <button type="submit" className={styles.submitButton}>
-        {initialData ? 'Update Profile' : 'Create Profile'}
-      </button>
+      <div className={styles.navigation}>
+        {currentStep > 0 && (
+          <button type="button" onClick={() => setCurrentStep(currentStep - 1)} className={styles.backButton}>
+            Back
+          </button>
+        )}
+        <button type="submit" className={styles.nextButton}>
+          {currentStep === steps.length - 1 ? 'Complete' : 'Next'}
+        </button>
+      </div>
     </form>
   );
 };

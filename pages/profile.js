@@ -15,6 +15,7 @@ export default function Profile() {
 
   const fetchProfileData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -36,11 +37,15 @@ export default function Profile() {
       const data = await response.json();
       setProfileData(data);
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      setError(`Error fetching profile: ${error.message}`);
+      console.error('Error fetching profile data:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditProfile = () => {
+    router.push('/profile/edit');
   };
 
   if (loading) {
@@ -51,22 +56,20 @@ export default function Profile() {
     return <div className={styles.error}>{error}</div>;
   }
 
-  const hasDetailedProfile = profileData && (profileData.learning_style || profileData.learning_disabilities);
-
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>My Profile</h1>
       {profileData ? (
         <>
           <UserProfile profileData={profileData} />
-          <button className={styles.editButton} onClick={() => router.push('/profile/edit')}>
-            {hasDetailedProfile ? 'Edit Profile' : 'Complete Profile'}
+          <button className={styles.editButton} onClick={handleEditProfile}>
+            Edit Profile
           </button>
         </>
       ) : (
         <div className={styles.emptyProfile}>
-          <p>We couldn't find your profile information.</p>
-          <button className={styles.createButton} onClick={() => router.push('/profile/edit')}>
+          <p>Let's set up your profile to get started.</p>
+          <button className={styles.createButton} onClick={handleEditProfile}>
             Create Profile
           </button>
         </div>
