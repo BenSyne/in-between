@@ -1,22 +1,25 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+export function authenticateToken(req, res) {
+  return new Promise((resolve, reject) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    return res.status(401).json({ error: 'No authentication token provided' });
-  }
-
-  const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key_here';
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error('Token verification error:', err);
-      return res.status(403).json({ error: 'Invalid or expired token' });
+    if (token == null) {
+      res.status(401).json({ error: 'No token provided' });
+      reject('No token provided');
+      return;
     }
-    req.user = user;
-    next();
-  });
-};
 
-module.exports = { authenticateToken };
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        res.status(403).json({ error: 'Invalid token' });
+        reject('Invalid token');
+        return;
+      }
+
+      req.user = user;
+      resolve();
+    });
+  });
+}

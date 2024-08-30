@@ -1,30 +1,21 @@
 import Link from 'next/link'
-import { useRouter } from 'next/router'
 import styles from '../styles/Header.module.css'
 
-export default function Header() {
-  const router = useRouter()
-
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    router.push('/login')
-  }
-
+const Header = () => {
   return (
     <header className={styles.header}>
       <nav>
         <ul>
-          <li>
-            <Link href="/">Home</Link>
-          </li>
-          <li>
-            <Link href="/chat">Chat</Link>
-          </li>
-          <li>
-            <button onClick={handleLogout}>Logout</button>
-          </li>
+          <li><Link href="/">Home</Link></li>
+          <li><Link href="/chat">Chat</Link></li>
+          <li><Link href="/profile">My Profile</Link></li>
+          <li><Link href="/profile/edit">Edit Profile</Link></li>
+          <li><Link href="/login">Login</Link></li>
+          <li><Link href="/register">Register</Link></li>
         </ul>
       </nav>
     </header>
-  )
-}
+  );
+};
+
+export default Header;
