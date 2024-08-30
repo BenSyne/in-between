@@ -51,6 +51,7 @@ export default function ProfileEdit() {
   const handleProfileUpdate = async (updatedProfileData) => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Sending profile update:', updatedProfileData); // Add this line
       const response = await fetch('/api/users/profile', {
         method: 'PUT',
         headers: {
@@ -62,9 +63,11 @@ export default function ProfileEdit() {
 
       if (response.ok) {
         const updatedProfile = await response.json();
+        console.log('Profile updated successfully:', updatedProfile); // Add this line
         router.push('/profile');
       } else {
         const errorText = await response.text();
+        console.error('Error response:', errorText); // Add this line
         throw new Error(errorText);
       }
     } catch (error) {
