@@ -24,8 +24,8 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'POST') {
     try {
-      const { chat_id, content } = req.body;
-      console.log('Received message:', { chat_id, content });
+      const { chat_id, content, userProfile } = req.body;
+      console.log('Received message:', { chat_id, content, userProfile });
 
       // Check if the user is a participant in the chat
       const participantCheck = await pool.query(
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'You are not a participant in this chat' });
       }
 
-      // Insert the user's message
+      // Insert user message
       const userMessageResult = await pool.query(
         'INSERT INTO messages (sender_id, chat_id, content) VALUES ($1, $2, $3) RETURNING *',
         [user.userId, chat_id, content]
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
       // Generate AI response
       console.log('Generating AI response...');
-      const aiResponse = await processMessage(content, chatHistoryResult.rows);
+      const aiResponse = await processMessage(content, chatHistoryResult.rows, userProfile);
       console.log('AI response generated:', aiResponse);
 
       // Insert AI response

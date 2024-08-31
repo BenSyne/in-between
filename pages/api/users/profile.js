@@ -66,7 +66,12 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const result = await pool.query('SELECT * FROM user_profiles WHERE user_id = $1', [user.userId]);
+      const result = await pool.query(`
+        SELECT u.username, up.*
+        FROM users u
+        LEFT JOIN user_profiles up ON u.id = up.user_id
+        WHERE u.id = $1
+      `, [user.userId]);
       
       if (result.rows.length > 0) {
         res.status(200).json(result.rows[0]);
@@ -80,14 +85,20 @@ export default async function handler(req, res) {
   } else if (req.method === 'PUT') {
     try {
       const sanitizedData = sanitizeProfileData(req.body);
-      const columns = Object.keys(sanitizedData);
-      const values = Object.values(sanitizedData);
+      const columns = Object.keys(sanitizedData).filter(key => key !== 'username');
+      const values = columns.map(col => sanitizedData[col]);
       const setClause = columns.map((col, index) => `${col} = $${index + 2}`).join(', ');
       const query = `
-        INSERT INTO user_profiles (user_id, ${columns.join(', ')})
-        VALUES ($1, ${columns.map((_, index) => `$${index + 2}`).join(', ')})
-        ON CONFLICT (user_id) DO UPDATE SET ${setClause}
-        RETURNING *
+        WITH updated_profile AS (
+          INSERT INTO user_profiles (user_id, ${columns.join(', ')})
+          VALUES ($1, ${columns.map((_, index) => `$${index + 2}`).join(', ')})
+          ON CONFLICT (user_id) DO UPDATE SET ${setClause}
+          RETURNING *
+        )
+        SELECT u.username, up.*
+        FROM users u
+        LEFT JOIN updated_profile up ON u.id = up.user_id
+        WHERE u.id = $1
       `;
       const result = await pool.query(query, [user.userId, ...values]);
       

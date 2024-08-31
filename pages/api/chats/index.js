@@ -1,5 +1,6 @@
 import { pool } from '../../../src/db';
 import { authenticateToken } from '../../../src/middleware/auth';
+import { processMessage } from '../../../src/utils/openai';
 
 export default async function handler(req, res) {
   const user = await authenticateToken(req);
@@ -51,9 +52,20 @@ export default async function handler(req, res) {
 
         // If it's an AI chat, add an initial message from the AI
         if (is_ai_chat) {
+          // Fetch user profile
+          const profileResult = await client.query(
+            'SELECT * FROM user_profiles WHERE user_id = $1',
+            [user.userId]
+          );
+          const userProfile = profileResult.rows[0] || {};
+
+          // Generate initial AI message
+          const initialPrompt = generateInitialPrompt(userProfile);
+          const aiResponse = await processMessage(initialPrompt);
+
           await client.query(
             'INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3)',
-            [newChat.id, null, "Hello! How can I assist you today?"]
+            [newChat.id, null, aiResponse]
           );
         }
 
@@ -112,4 +124,17 @@ export default async function handler(req, res) {
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }
+}
+
+function generateInitialPrompt(userProfile) {
+  const profileInfo = Object.entries(userProfile)
+    .filter(([key, value]) => value && key !== 'user_id')
+    .map(([key, value]) => `${key.replace(/_/g, ' ')}: ${Array.isArray(value) ? value.join(', ') : value}`)
+    .join('\n');
+
+  return `Here is the user's information:
+
+${profileInfo}
+
+Based on this information, please greet the user and start a conversation that is tailored to their profile. Be friendly, empathetic, and show that you understand their background and preferences.`;
 }

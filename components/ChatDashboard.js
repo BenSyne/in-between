@@ -16,11 +16,13 @@ const ChatDashboard = () => {
   const [isAITyping, setIsAITyping] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [chatToDelete, setChatToDelete] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
     fetchChats();
     fetchCurrentUser();
+    fetchUserProfile();
   }, []);
 
   useEffect(() => {
@@ -55,6 +57,21 @@ const ChatDashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching current user:', error);
+      setError('Failed to load user profile. Please try again.');
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await fetch('/api/users/profile', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setUserProfile(data);
+      } else {
+        throw new Error('Failed to fetch user profile');
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
       setError('Failed to load user profile. Please try again.');
     }
   };
@@ -97,7 +114,7 @@ const ChatDashboard = () => {
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: selectedChat.id, content }),
+        body: JSON.stringify({ chat_id: selectedChat.id, content, userProfile }),
         credentials: 'include',
       });
 
@@ -130,7 +147,7 @@ const ChatDashboard = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}` // Add this line if you're using JWT
         },
-        body: JSON.stringify({ is_ai_chat: isAIChat }),
+        body: JSON.stringify({ is_ai_chat: isAIChat, userProfile }),
         credentials: 'include',
       });
 
