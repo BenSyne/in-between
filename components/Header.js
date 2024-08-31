@@ -8,9 +8,24 @@ const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
-  }, []);
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem('token');
+      setIsLoggedIn(!!token);
+    };
+
+    checkLoginStatus();
+
+    // Add event listener for storage changes
+    window.addEventListener('storage', checkLoginStatus);
+
+    // Check login status on route change
+    router.events.on('routeChangeComplete', checkLoginStatus);
+
+    return () => {
+      window.removeEventListener('storage', checkLoginStatus);
+      router.events.off('routeChangeComplete', checkLoginStatus);
+    };
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -25,7 +40,7 @@ const Header = () => {
           In-Between
         </Link>
         <div className={styles.links}>
-          {isLoggedIn && (
+          {isLoggedIn ? (
             <>
               <Link href="/chat" className={router.pathname === '/chat' ? styles.active : ''}>
                 Chat
@@ -36,6 +51,15 @@ const Header = () => {
               <button onClick={handleLogout} className={styles.logoutButton}>
                 Logout
               </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className={router.pathname === '/login' ? styles.active : ''}>
+                Login
+              </Link>
+              <Link href="/register" className={router.pathname === '/register' ? styles.active : ''}>
+                Register
+              </Link>
             </>
           )}
         </div>

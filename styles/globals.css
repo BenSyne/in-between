@@ -19,12 +19,13 @@ body {
   color: var(--text-color);
   height: 100%;
   width: 100%;
-  overflow: hidden;
 }
 
 #__next {
   height: 100%;
   width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
@@ -37,4 +38,10 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+}
+
+/* Add this new style */
+main {
+  flex: 1;
+  overflow-y: auto;
 }
