@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import UserProfileQuestionnaire from '../../components/UserProfileQuestionnaire';
 import styles from '../../styles/ProfileEdit.module.css';
+import { isAuthenticated, refreshToken } from '../../utils/auth';
 
 export default function ProfileEdit() {
   const [profileData, setProfileData] = useState(null);
@@ -10,39 +11,47 @@ export default function ProfileEdit() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchProfileData();
-  }, []);
+    const checkAuthAndFetchProfile = async () => {
+      const authenticated = await isAuthenticated();
+      if (!authenticated) {
+        const refreshed = await refreshToken();
+        if (!refreshed) {
+          router.push('/login');
+          return;
+        }
+      }
+      fetchProfileData();
+    };
+
+    checkAuthAndFetchProfile();
+  }, [router]);
 
   const fetchProfileData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       const response = await fetch('/api/users/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        credentials: 'include',
       });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          // Profile not found, but this is okay for editing/creating
-          setProfileData(null);
-        } else {
-          throw new Error(`Error fetching profile: ${response.statusText}`);
+        if (response.status === 401) {
+          const refreshed = await refreshToken();
+          if (refreshed) {
+            fetchProfileData();
+            return;
+          } else {
+            throw new Error('Authentication failed');
+          }
         }
-      } else {
-        const data = await response.json();
-        setProfileData(data);
+        throw new Error(`Error fetching profile: ${response.statusText}`);
       }
+
+      const data = await response.json();
+      setProfileData(data);
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      setError(`Error fetching profile: ${error.message}`);
+      console.error('Error fetching profile data:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -50,14 +59,12 @@ export default function ProfileEdit() {
 
   const handleProfileUpdate = async (updatedProfileData) => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('Sending profile update:', updatedProfileData);
       const response = await fetch('/api/users/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include',
         body: JSON.stringify(updatedProfileData)
       });
 

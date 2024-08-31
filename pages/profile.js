@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import UserProfile from '../components/UserProfile';
 import styles from '../styles/Profile.module.css';
+import { isAuthenticated, refreshToken } from '../utils/auth';
 
 export default function Profile() {
   const [profileData, setProfileData] = useState(null);
@@ -10,27 +11,39 @@ export default function Profile() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchProfileData();
-  }, []);
+    const checkAuthAndFetchProfile = async () => {
+      const authenticated = await isAuthenticated();
+      if (!authenticated) {
+        const refreshed = await refreshToken();
+        if (!refreshed) {
+          router.push('/login');
+          return;
+        }
+      }
+      fetchProfileData();
+    };
+
+    checkAuthAndFetchProfile();
+  }, [router]);
 
   const fetchProfileData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       const response = await fetch('/api/users/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        credentials: 'include',
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          const refreshed = await refreshToken();
+          if (refreshed) {
+            fetchProfileData();
+            return;
+          } else {
+            throw new Error('Authentication failed');
+          }
+        }
         throw new Error(`Error fetching profile: ${response.statusText}`);
       }
 
