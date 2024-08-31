@@ -4,18 +4,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function processMessage(message, chatHistory = [], userProfile = {}) {
+export async function processMessage(message, chatHistory = []) {
   try {
-    console.log('Processing message with OpenAI:', { message, chatHistory, userProfile });
-
-    const systemMessage = `You are a helpful assistant that processes and enhances messages. 
-    User profile: ${JSON.stringify(userProfile)}. 
-    Please tailor your responses based on the user's profile information.`;
+    console.log('Processing message with OpenAI:', { message, chatHistory });
 
     const messages = [
-      { role: "system", content: systemMessage },
+      { role: "system", content: "You are a helpful assistant." },
       ...chatHistory.map(msg => ({
-        role: msg.sender_id === 'user' ? 'user' : 'assistant',
+        role: msg.sender_id === 'ai' ? 'assistant' : 'user',
         content: msg.content
       })),
       { role: "user", content: message }

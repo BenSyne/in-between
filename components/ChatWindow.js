@@ -1,38 +1,50 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import styles from '../styles/ChatWindow.module.css';
 
-const ChatWindow = ({ messages = [], currentUser }) => {
+const ChatWindow = ({ messages = [], currentUser, isAITyping }) => {
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   useEffect(() => {
-    console.log('ChatWindow received messages:', JSON.stringify(messages, null, 2));
+    scrollToBottom();
   }, [messages]);
 
-  if (!messages || messages.length === 0) {
-    return <div className={styles.chatWindow}>No messages to display.</div>;
-  }
+  const isUserMessage = (message) => {
+    return message && message.sender_id !== null && message.sender_id !== 'ai';
+  };
 
   return (
     <div className={styles.chatWindow}>
       <div className={styles.messageList}>
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`${styles.message} ${
-              message.sender_type === 'user' ? styles.sent : 
-              message.sender_type === 'ai' ? styles.ai :
-              styles.received
-            }`}
-          >
-            <p>{message.content}</p>
-            <small>
-              Sent at: {new Date(message.sent_at).toLocaleString()} | 
-              Sender: {message.sender_type || 'Unknown'} | 
-              AI Enhanced: {message.is_ai_enhanced ? 'Yes' : 'No'}
-            </small>
-            {message.original_content && (
-              <small>Original content: {message.original_content}</small>
-            )}
+        {messages.map((message, index) => {
+          if (!message) return null; // Skip rendering if message is undefined
+          return (
+            <div
+              key={index}
+              className={`${styles.message} ${
+                isUserMessage(message) ? styles.sent : styles.received
+              }`}
+            >
+              <div className={styles.messageContent}>
+                <p>{message.content || 'No content'}</p>
+                <small>
+                  {message.sent_at ? new Date(message.sent_at).toLocaleTimeString() : 'No timestamp'}
+                </small>
+              </div>
+            </div>
+          );
+        })}
+        {isAITyping && (
+          <div className={`${styles.message} ${styles.received} ${styles.typing}`}>
+            <div className={styles.messageContent}>
+              <p>AI is typing...</p>
+            </div>
           </div>
-        ))}
+        )}
+        <div ref={messagesEndRef} />
       </div>
     </div>
   );
