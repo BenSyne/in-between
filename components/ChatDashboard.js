@@ -113,18 +113,25 @@ const ChatDashboard = () => {
     try {
       const response = await fetch('/api/chats', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}` // Add this line if you're using JWT
+        },
         body: JSON.stringify({ is_ai_chat: isAIChat }),
         credentials: 'include',
       });
 
-      if (response.ok) {
-        const newChat = await response.json();
-        setChats(prevChats => [newChat, ...prevChats]);
-        setSelectedChat(newChat);
-        setMessages([]);
-      } else {
+      if (!response.ok) {
         throw new Error('Failed to start new chat');
+      }
+
+      const newChat = await response.json();
+      setChats(prevChats => [newChat, ...prevChats]);
+      setSelectedChat(newChat);
+      setMessages([]); // Clear messages for the new chat
+      if (isAIChat) {
+        // Add the initial AI message
+        setMessages([{ id: 'initial', sender_id: null, content: "Hello! How can I assist you today?", sent_at: new Date().toISOString() }]);
       }
     } catch (error) {
       console.error('Error starting new chat:', error);
