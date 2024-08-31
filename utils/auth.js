@@ -1,6 +1,9 @@
 export const isAuthenticated = async () => {
   try {
-    const response = await fetch('/api/auth/check', { credentials: 'include' });
+    const response = await fetch('/api/auth/check', {
+      method: 'GET',
+      credentials: 'include',
+    });
     return response.ok;
   } catch (error) {
     console.error('Error checking authentication:', error);
@@ -14,14 +17,7 @@ export const refreshToken = async () => {
       method: 'POST',
       credentials: 'include',
     });
-
-    if (response.ok) {
-      console.log('Token refreshed successfully');
-      return true;
-    } else {
-      console.error('Failed to refresh token:', await response.text());
-      return false;
-    }
+    return response.ok;
   } catch (error) {
     console.error('Error refreshing token:', error);
     return false;
