@@ -14,7 +14,7 @@ const NavBar = () => {
       setAuth(authStatus);
     };
     checkAuth();
-  }, []);
+  }, [router.asPath]);
 
   const handleLogout = async () => {
     try {
