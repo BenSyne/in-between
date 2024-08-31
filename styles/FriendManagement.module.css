@@ -1,0 +1,45 @@
+.friendManagement {
+  padding: 20px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.friendManagement h2 {
+  margin-bottom: 10px;
+}
+
+.friendManagement ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.friendManagement li {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: white;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.friendManagement button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.friendManagement button:hover {
+  background-color: #45a049;
+}
+
+.friendManagement input {
+  padding: 5px;
+  margin-right: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}

@@ -1,41 +1,33 @@
-import { useState } from 'react'
-import { useRouter } from 'next/router'
-import styles from '../styles/Login.module.css'
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import styles from '../styles/Login.module.css';
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const router = useRouter()
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    console.log('Login attempt with email:', email); // Add this line
-
     try {
-      console.log('Sending login request...'); // Add this line
-      const response = await fetch('/api/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
-
-      console.log('Login response status:', response.status); // Add this line
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Login response data:', data); // Add this line
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-          console.log('Token set in localStorage:', data.token);
+        if (data.success) {
           router.push('/chat');
         } else {
-          setError('No token received from server');
+          setError('Login failed');
         }
       } else {
         const errorData = await response.json();
-        console.log('Login error data:', errorData); // Add this line
         setError(errorData.error || 'Invalid email or password');
       }
     } catch (error) {
@@ -46,8 +38,8 @@ export default function Login() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>Login</h1>
       <form onSubmit={handleSubmit} className={styles.form}>
+        <h1 className={styles.title}>Login</h1>
         <input
           type="email"
           value={email}
@@ -65,8 +57,8 @@ export default function Login() {
           className={styles.input}
         />
         <button type="submit" className={styles.button}>Login</button>
+        {error && <p className={styles.error}>{error}</p>}
       </form>
-      {error && <p className={styles.error}>{error}</p>}
     </div>
-  )
+  );
 }

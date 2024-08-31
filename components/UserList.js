@@ -9,8 +9,12 @@ const UserList = ({ chats, onSelectChat }) => {
   return (
     <div className={styles.userList}>
       {chats.map((chat) => (
-        <div key={chat.id} className={styles.chatItem} onClick={() => onSelectChat(chat)}>
-          {chat.is_ai_chat ? 'AI Chat' : `Chat ${chat.id}`}
+        <div 
+          key={chat.id} 
+          className={`${styles.chatItem} ${chat.is_ai_chat ? styles.aiChat : styles.userChat}`} 
+          onClick={() => onSelectChat(chat)}
+        >
+          {chat.is_ai_chat ? 'AI Chat' : `Chat with ${chat.friend_username || 'User'}`}
         </div>
       ))}
     </div>

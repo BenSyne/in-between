@@ -22,3 +22,21 @@
   font-size: 1.2rem;
   color: var(--secondary-text-color);
 }
+
+.chatPage {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.chatDashboard {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+}
+
+.friendManagement {
+  flex: 1;
+  border-left: 1px solid #e0e0e0;
+  overflow-y: auto;
+}
