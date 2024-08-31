@@ -51,7 +51,7 @@ export default function ProfileEdit() {
   const handleProfileUpdate = async (updatedProfileData) => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Sending profile update:', updatedProfileData); // Add this line
+      console.log('Sending profile update:', updatedProfileData);
       const response = await fetch('/api/users/profile', {
         method: 'PUT',
         headers: {
@@ -63,11 +63,11 @@ export default function ProfileEdit() {
 
       if (response.ok) {
         const updatedProfile = await response.json();
-        console.log('Profile updated successfully:', updatedProfile); // Add this line
+        console.log('Profile updated successfully:', updatedProfile);
         router.push('/profile');
       } else {
         const errorText = await response.text();
-        console.error('Error response:', errorText); // Add this line
+        console.error('Error response:', errorText);
         throw new Error(errorText);
       }
     } catch (error) {
@@ -87,7 +87,7 @@ export default function ProfileEdit() {
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>{profileData ? 'Edit Profile' : 'Create Profile'}</h1>
-      <UserProfileQuestionnaire initialData={profileData} onComplete={handleProfileUpdate} />
+      <UserProfileQuestionnaire initialData={profileData || {}} onComplete={handleProfileUpdate} />
       <button className={styles.cancelButton} onClick={() => router.push('/profile')}>
         Cancel
       </button>
