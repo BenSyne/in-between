@@ -1,18 +1,19 @@
 .header {
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 1000;
+  width: 100%;
 }
 
 .nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem 2rem;
+  padding: 0.5rem 1rem;
+  max-width: none;
+  margin: 0;
 }
 
 .logo {
@@ -23,16 +24,28 @@
 
 .links {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
+  align-items: center;
 }
 
-.links a {
+.links a, .logoutButton {
   font-size: 1rem;
   color: var(--text-color);
   transition: color 0.2s ease;
+  text-decoration: none;
 }
 
 .links a:hover,
-.links a.active {
+.links a.active,
+.logoutButton:hover {
   color: var(--primary-color);
+}
+
+.logoutButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0;
 }
