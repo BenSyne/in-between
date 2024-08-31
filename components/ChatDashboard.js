@@ -45,7 +45,10 @@ const ChatDashboard = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setChats(data);
+        console.log('Fetched chats:', data); // Log the fetched chats
+        // Filter out chats with no messages or invalid data
+        const validChats = data.filter(chat => chat && chat.id);
+        setChats(validChats);
       } else if (response.status === 401) {
         console.log('Token expired, attempting to refresh');
         const refreshed = await refreshToken();
