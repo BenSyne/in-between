@@ -1,18 +1,15 @@
-import styles from '../styles/ChatWindow.module.css'
+import React from 'react';
+import styles from '../styles/ChatWindow.module.css';
 
-export default function ChatWindow({ messages, currentUser, selectedUser }) {
+const ChatWindow = ({ messages, currentUser }) => {
   return (
     <div className={styles.chatWindow}>
-      <div className={styles.chatHeader}>
-        <div className={styles.userAvatar}>{selectedUser.username[0].toUpperCase()}</div>
-        <h2>{selectedUser.username}</h2>
-      </div>
       <div className={styles.messageList}>
-        {messages.map((message) => (
+        {messages.map((message, index) => (
           <div
-            key={message.id}
+            key={index}
             className={`${styles.message} ${
-              message.sender_id === currentUser.id ? styles.sent : styles.received
+              message.sender_id === (currentUser?.id || 'user') ? styles.sent : styles.received
             }`}
           >
             <p>{message.content}</p>
@@ -21,5 +18,7 @@ export default function ChatWindow({ messages, currentUser, selectedUser }) {
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
+
+export default ChatWindow;

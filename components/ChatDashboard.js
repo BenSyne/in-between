@@ -3,73 +3,110 @@ import styles from '../styles/ChatDashboard.module.css';
 import UserList from './UserList';
 import ChatWindow from './ChatWindow';
 import MessageInput from './MessageInput';
+import AIChat from './AIChat';
 
 const ChatDashboard = ({ user }) => {
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [friends, setFriends] = useState([]);
+  const [chats, setChats] = useState([]);
 
   useEffect(() => {
-    fetchFriends();
+    fetchChats();
   }, []);
 
-  const fetchFriends = async () => {
+  const fetchChats = async () => {
     try {
-      const response = await fetch('/api/friends', {
+      const response = await fetch('/api/chats', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       if (response.ok) {
         const data = await response.json();
-        setFriends(data);
+        setChats(data);
       }
     } catch (error) {
-      console.error('Error fetching friends:', error);
+      console.error('Error fetching chats:', error);
     }
   };
 
-  const handleSelectUser = async (selectedUser) => {
-    setSelectedUser(selectedUser);
-    // Fetch messages for the selected user
+  const handleSelectChat = async (chat) => {
+    setSelectedChat(chat);
     try {
-      const response = await fetch(`/api/messages/${selectedUser.id}`, {
+      const response = await fetch(`/api/messages/${chat.id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       if (response.ok) {
         const data = await response.json();
         setMessages(data);
-      } else {
-        const errorData = await response.json();
-        console.error('Error fetching messages:', errorData.error);
-        // You can add user-friendly error handling here, e.g., showing an error message to the user
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
-      // You can add user-friendly error handling here, e.g., showing an error message to the user
+    }
+  };
+
+  const handleStartNewChat = async () => {
+    try {
+      const response = await fetch('/api/chats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ is_ai_chat: false }),
+      });
+      if (response.ok) {
+        const newChat = await response.json();
+        setChats([...chats, newChat]);
+        setSelectedChat(newChat);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error starting new chat:', error);
     }
   };
 
   const handleSendMessage = async (content) => {
-    // Implement send message logic here
-    console.log('Sending message:', content);
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          chat_id: selectedChat.id,
+          content: content,
+        }),
+      });
+      if (response.ok) {
+        const newMessage = await response.json();
+        setMessages([...messages, newMessage]);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
   return (
     <div className={styles.chatDashboard}>
       <div className={styles.sidebar}>
-        <UserList users={friends} onSelectUser={handleSelectUser} />
+        <button onClick={handleStartNewChat} className={styles.newChatButton}>Start New Chat</button>
+        <UserList chats={chats} onSelectChat={handleSelectChat} />
       </div>
       <div className={styles.chatArea}>
-        {selectedUser ? (
+        {selectedChat ? (
           <>
-            <ChatWindow messages={messages} currentUser={user} selectedUser={selectedUser} />
+            <ChatWindow messages={messages} currentUser={user} />
             <MessageInput onSendMessage={handleSendMessage} />
           </>
         ) : (
           <div className={styles.welcomeMessage}>
             <h2>Welcome to the chat app!</h2>
-            <p>Select a user to start chatting.</p>
+            <p>Select a chat or start a new one.</p>
           </div>
         )}
+      </div>
+      <div className={styles.aiChatArea}>
+        <AIChat user={user} />
       </div>
     </div>
   );

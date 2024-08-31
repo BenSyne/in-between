@@ -18,6 +18,52 @@ async function tableExists(client, tableName) {
   return result.rows[0].exists;
 }
 
+async function indexExists(client, indexName) {
+  const result = await client.query(
+    "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = $1)",
+    [indexName]
+  );
+  return result.rows[0].exists;
+}
+
+function splitSqlStatements(sql) {
+  const statements = [];
+  let currentStatement = '';
+  let inQuote = false;
+  let inDollarQuote = false;
+  let dollarQuoteTag = '';
+
+  for (let i = 0; i < sql.length; i++) {
+    const char = sql[i];
+    const nextChar = sql[i + 1] || '';
+
+    if (char === "'" && !inDollarQuote) {
+      inQuote = !inQuote;
+    } else if (char === '$' && nextChar === '$' && !inQuote) {
+      if (!inDollarQuote) {
+        inDollarQuote = true;
+        dollarQuoteTag = '$$';
+        i++; // Skip next $
+      } else if (sql.substr(i, dollarQuoteTag.length) === dollarQuoteTag) {
+        inDollarQuote = false;
+        i += dollarQuoteTag.length - 1; // Skip to end of closing tag
+      }
+    } else if (char === ';' && !inQuote && !inDollarQuote) {
+      statements.push(currentStatement.trim());
+      currentStatement = '';
+      continue;
+    }
+
+    currentStatement += char;
+  }
+
+  if (currentStatement.trim()) {
+    statements.push(currentStatement.trim());
+  }
+
+  return statements;
+}
+
 async function runMigrations() {
   const client = await pool.connect();
   try {
@@ -33,17 +79,25 @@ async function runMigrations() {
         
         console.log(`Running migration: ${file}`);
         
-        // Split the SQL into individual statements
-        const statements = sql.split(';').filter(stmt => stmt.trim() !== '');
+        const statements = splitSqlStatements(sql);
         
         for (let statement of statements) {
-          // Extract table name from CREATE TABLE statements
           const tableMatch = statement.match(/CREATE TABLE (\w+)/i);
           if (tableMatch) {
             const tableName = tableMatch[1];
             const exists = await tableExists(client, tableName);
             if (exists) {
               console.log(`Table ${tableName} already exists, skipping...`);
+              continue;
+            }
+          }
+          
+          const indexMatch = statement.match(/CREATE INDEX (\w+)/i);
+          if (indexMatch) {
+            const indexName = indexMatch[1];
+            const exists = await indexExists(client, indexName);
+            if (exists) {
+              console.log(`Index ${indexName} already exists, skipping...`);
               continue;
             }
           }
