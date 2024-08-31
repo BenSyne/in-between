@@ -14,6 +14,8 @@ const ChatDashboard = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [error, setError] = useState(null);
   const [isAITyping, setIsAITyping] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -80,6 +82,16 @@ const ChatDashboard = () => {
     if (!selectedChat) return;
 
     try {
+      // Immediately add the user's message to the UI
+      const userMessage = {
+        id: Date.now(), // Temporary ID
+        sender_id: currentUser.id,
+        content: content,
+        sent_at: new Date().toISOString(),
+      };
+      setMessages(prevMessages => [...prevMessages, userMessage]);
+
+      // Show AI is typing
       setIsAITyping(true);
 
       const response = await fetch('/api/messages', {
@@ -96,16 +108,17 @@ const ChatDashboard = () => {
       const data = await response.json();
       console.log('Received response from server:', data);
 
+      // Update messages with the actual user message from the server and the AI response
       setMessages(prevMessages => [
-        ...prevMessages,
+        ...prevMessages.filter(msg => msg.id !== userMessage.id), // Remove the temporary user message
         data.userMessage,
         data.aiMessage
       ]);
-      setIsAITyping(false);
     } catch (error) {
       console.error('Error sending message:', error);
+      // Optionally, you can show an error message to the user here
+    } finally {
       setIsAITyping(false);
-      setError('Failed to send message. Please try again.');
     }
   };
 
@@ -139,13 +152,48 @@ const ChatDashboard = () => {
     }
   };
 
+  const handleDeleteChat = async () => {
+    if (!chatToDelete) return;
+
+    try {
+      const response = await fetch(`/api/chats?chatId=${chatToDelete.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete chat');
+      }
+
+      setChats(prevChats => prevChats.filter(chat => chat.id !== chatToDelete.id));
+      if (selectedChat && selectedChat.id === chatToDelete.id) {
+        setSelectedChat(null);
+        setMessages([]);
+      }
+      setShowDeleteConfirmation(false);
+      setChatToDelete(null);
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+      setError('Failed to delete chat. Please try again.');
+    }
+  };
+
+  const openDeleteConfirmation = (chat) => {
+    setChatToDelete(chat);
+    setShowDeleteConfirmation(true);
+  };
+
   return (
     <div className={styles.chatDashboard}>
       <div className={styles.sidebar}>
         <button onClick={() => handleStartNewChat(true)} className={styles.newChatButton}>
           Start New AI Chat
         </button>
-        <UserList chats={chats} onSelectChat={handleSelectChat} />
+        <UserList 
+          chats={chats} 
+          onSelectChat={handleSelectChat} 
+          onDeleteChat={openDeleteConfirmation}
+        />
       </div>
       <div className={styles.chatArea}>
         {error && <div className={styles.errorMessage}>{error}</div>}
@@ -165,6 +213,13 @@ const ChatDashboard = () => {
           </div>
         )}
       </div>
+      {showDeleteConfirmation && (
+        <div className={styles.deleteConfirmation}>
+          <p>Are you sure you want to delete this chat?</p>
+          <button onClick={handleDeleteChat}>Yes, delete</button>
+          <button onClick={() => setShowDeleteConfirmation(false)}>Cancel</button>
+        </div>
+      )}
     </div>
   );
 };

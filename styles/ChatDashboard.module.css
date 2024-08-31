@@ -54,14 +54,15 @@
 
 .chatDashboard {
   display: flex;
-  height: 100%;
+  height: 100vh;
 }
 
 .sidebar {
   width: 300px;
-  background-color: #f5f5f5;
+  background-color: #ffffff;
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
+  padding: 20px 10px;
 }
 
 .chatArea {
@@ -72,11 +73,20 @@
 
 .newChatButton {
   width: 100%;
-  padding: 10px;
-  background-color: #4CAF50;
+  padding: 12px;
+  background-color: #0084ff;
   color: white;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.newChatButton:hover {
+  background-color: #0077e6;
 }
 
 .welcomeMessage {
@@ -86,14 +96,64 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  color: #757575;
+  color: #65676b;
+  padding: 0 20px;
 }
 
 .welcomeMessage h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
+  font-size: 28px;
+  margin-bottom: 15px;
+  color: #050505;
 }
 
 .welcomeMessage p {
+  font-size: 18px;
+}
+
+.deleteConfirmation {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  text-align: center;
+}
+
+.deleteConfirmation p {
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #050505;
+}
+
+.deleteConfirmation button {
+  margin: 0 10px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
   font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.deleteConfirmation button:first-child {
+  background-color: #e41e3f;
+  color: white;
+}
+
+.deleteConfirmation button:first-child:hover {
+  background-color: #c91834;
+}
+
+.deleteConfirmation button:last-child {
+  background-color: #f0f2f5;
+  color: #050505;
+}
+
+.deleteConfirmation button:last-child:hover {
+  background-color: #e4e6eb;
 }

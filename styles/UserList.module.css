@@ -1,5 +1,5 @@
 .userList {
-  padding: 20px;
+  padding: 10px;
 }
 
 .userList h2 {
@@ -55,10 +55,55 @@
 }
 
 .chatItem {
-  padding: 10px;
-  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+}
+
+.chatButton {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #f0f2f5;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  border-radius: 5px;
+  transition: all 0.3s ease;
+  text-align: left;
+  font-size: 16px;
+}
+
+.chatButton:hover {
+  background-color: #e4e6eb;
+}
+
+.icon {
+  margin-right: 10px;
+  font-size: 20px;
+  color: #65676b;
+}
+
+.chatName {
+  color: #050505;
+  font-weight: 500;
+}
+
+.deleteButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  margin-left: 10px;
+  color: #65676b;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+}
+
+.deleteButton:hover {
+  background-color: #f0f2f5;
+  color: #e41e3f;
 }
 
 .aiChat {

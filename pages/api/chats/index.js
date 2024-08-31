@@ -69,6 +69,46 @@ export default async function handler(req, res) {
       console.error('Error creating new chat:', error);
       res.status(500).json({ error: 'Failed to create new chat' });
     }
+  } else if (req.method === 'DELETE') {
+    const { chatId } = req.query;
+
+    if (!chatId) {
+      return res.status(400).json({ error: 'Chat ID is required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Check if the user is a participant in the chat
+      const participantCheck = await client.query(
+        'SELECT * FROM chat_participants WHERE chat_id = $1 AND user_id = $2',
+        [chatId, user.userId]
+      );
+
+      if (participantCheck.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'You are not a participant in this chat' });
+      }
+
+      // Delete messages associated with the chat
+      await client.query('DELETE FROM messages WHERE chat_id = $1', [chatId]);
+
+      // Delete chat participants
+      await client.query('DELETE FROM chat_participants WHERE chat_id = $1', [chatId]);
+
+      // Delete the chat
+      await client.query('DELETE FROM chats WHERE id = $1', [chatId]);
+
+      await client.query('COMMIT');
+      res.status(200).json({ message: 'Chat deleted successfully' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error deleting chat:', error);
+      res.status(500).json({ error: 'Failed to delete chat' });
+    } finally {
+      client.release();
+    }
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }
