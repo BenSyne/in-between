@@ -58,20 +58,26 @@ const ChatDashboard = () => {
 
   const handleSelectChat = async (chat) => {
     setSelectedChat(chat);
-    // Fetch messages for the selected chat
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/chats/${chat.id}/messages`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (response.ok) {
         const data = await response.json();
         setMessages(data);
+      } else if (response.status === 401) {
+        console.log('Token expired, attempting to refresh');
+        const refreshed = await refreshToken();
+        if (refreshed) {
+          handleSelectChat(chat); // Retry after refreshing
+        }
       } else {
-        console.error('Error fetching messages:', response.statusText);
+        console.error('Error fetching messages:', await response.text());
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
+      // Implement a retry mechanism or show an error message to the user
+      alert('Failed to load messages. Please try again later.');
     }
   };
 
@@ -79,23 +85,43 @@ const ChatDashboard = () => {
     if (!selectedChat) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/chats/${selectedChat.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content }),
-      });
+      let response;
+      if (selectedChat.is_ai_chat) {
+        response = await fetch('/api/ai-chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: content, chatHistory: messages }),
+          credentials: 'include',
+        });
+      } else {
+        response = await fetch(`/api/chats/${selectedChat.id}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ content }),
+          credentials: 'include',
+        });
+      }
+
       if (response.ok) {
         const newMessage = await response.json();
-        setMessages([...messages, newMessage]);
+        setMessages([...messages, { sender_id: currentUser.id, content }, newMessage]);
+      } else if (response.status === 401) {
+        console.log('Token expired, attempting to refresh');
+        const refreshed = await refreshToken();
+        if (refreshed) {
+          handleSendMessage(content); // Retry after refreshing
+        }
       } else {
-        console.error('Error sending message:', response.statusText);
+        console.error('Error sending message:', await response.text());
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Implement a retry mechanism or show an error message to the user
+      alert('Failed to send message. Please try again later.');
     }
   };
 

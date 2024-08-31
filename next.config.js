@@ -23,5 +23,11 @@ module.exports = {
   env: {
     JWT_SECRET: process.env.JWT_SECRET,
     REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  },
+  api: {
+    bodyParser: false,
+    externalResolver: true,
+    timeout: 60000, // Set timeout to 60 seconds
   },
 };

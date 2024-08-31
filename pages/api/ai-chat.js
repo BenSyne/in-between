@@ -1,37 +1,37 @@
-import { processMessage } from '../../src/utils/openai';
+import OpenAI from 'openai';
 import { authenticateToken } from '../../src/middleware/auth';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
-      console.log('Received AI chat request:', req.body);
-
-      const token = req.headers.authorization?.split(' ')[1];
-      const user = await authenticateToken(token);
+      const user = await authenticateToken(req);
       if (!user) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const { message, chatHistory, userProfile } = req.body;
+      const { message, chatHistory } = req.body;
 
-      console.log('Processing message with chat history and user profile:', { message, chatHistory, userProfile });
+      const messages = [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        ...chatHistory.map(msg => ({
+          role: msg.sender_id === 'ai' ? 'assistant' : 'user',
+          content: msg.content
+        })),
+        { role: 'user', content: message }
+      ];
 
-      // Process the message using OpenAI, including chat history and user profile
-      const processedContent = await processMessage(message, chatHistory, userProfile);
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4-1106-preview', // Changed to GPT-4 Turbo
+        messages: messages,
+      });
 
-      console.log('Processed content:', processedContent);
+      const aiResponse = completion.choices[0].message.content;
 
-      const aiMessage = {
-        id: Date.now(),
-        sender_id: 'ai',
-        recipient_id: user.userId,
-        content: processedContent,
-        sent_at: new Date().toISOString(),
-      };
-
-      console.log('Sending AI response:', aiMessage);
-
-      res.status(200).json(aiMessage);
+      res.status(200).json({ content: aiResponse });
     } catch (error) {
       console.error('Error processing AI chat message:', error);
       res.status(500).json({ error: 'Error processing AI chat message' });
