@@ -23,8 +23,8 @@ export default async function handler(req, res) {
       console.log('REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET ? 'Set' : 'Not set');
 
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-      let refreshToken = null;
+      
+      let refreshToken;
       if (process.env.REFRESH_TOKEN_SECRET) {
         refreshToken = jwt.sign({ userId: user.id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
       } else {
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       res.setHeader('Set-Cookie', cookies);
 
       console.log('Tokens set in cookies');
-      res.status(200).json({ success: true, user: { id: user.id, email: user.email } });
+      res.status(200).json({ success: true });
     } catch (error) {
       console.error('Error logging in:', error);
       res.status(500).json({ error: 'Internal server error' });

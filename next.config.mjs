@@ -1,4 +1,4 @@
-module.exports = {
+const nextConfig = {
   reactStrictMode: true,
   async rewrites() {
     return [
@@ -14,20 +14,19 @@ module.exports = {
         source: '/api/:path*',
         headers: [
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
-          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization' },
         ],
       },
     ];
   },
-  env: {
-    JWT_SECRET: process.env.JWT_SECRET,
-    REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  serverRuntimeConfig: {
+    timeoutMs: 60000, // 60 seconds
   },
-  api: {
-    bodyParser: false,
-    externalResolver: true,
-    timeout: 60000, // Set timeout to 60 seconds
+  publicRuntimeConfig: {
+    apiTimeout: 60000, // 60 seconds
   },
 };
+
+export default nextConfig;

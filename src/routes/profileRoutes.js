@@ -1,26 +1,8 @@
-const express = require('express');
+import express from 'express';
+import { pool } from '../db.js';
+import { authenticateToken } from '../middleware/auth.js';
+
 const router = express.Router();
-const { pool } = require('../db');
-const { authenticateToken } = require('../middleware/auth');
-
-// Make sure all routes use the authenticateToken middleware
-router.use(authenticateToken);
-
-// Create user profile
-router.post('/', async (req, res) => {
-  // TODO: Implement authentication middleware
-  const userId = req.user.id;
-  const profileData = req.body;
-  try {
-    const result = await pool.query(
-      'INSERT INTO user_profiles (user_id, learning_style, learning_disabilities, adhd, focus_issues, reaction_to_failure, attitude_towards_winning_losing, emotional_intelligence_understanding, emotional_intelligence_hours_spent, core_values, internal_motivators, external_motivators, self_soothing_methods_healthy, self_soothing_methods_unhealthy, stress_management_positive, stress_management_negative, personal_identity, role_models, admirable_qualities, hobbies, challenging_topics, therapy_experience, favorite_food, favorite_food_reason, conflict_resolution_approach, unique_challenges) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING *',
-      [userId, ...Object.values(profileData)]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: 'Error creating user profile' });
-  }
-});
 
 // Get user profile
 router.get('/', authenticateToken, async (req, res) => {
@@ -131,12 +113,12 @@ router.put('/', authenticateToken, async (req, res) => {
         favorite_food_reason, conflict_resolution_approach, unique_challenges
       ]
     );
-
+    console.log('Query result:', result.rows[0]);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: 'Error updating user profile' });
+    res.status(500).json({ error: 'Error updating user profile', details: error.message });
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,11 +1,12 @@
-const express = require('express');
+import express from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { pool } from '../db.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { validateRegistration, validateLogin } from '../validators/userValidators.js';
+import logger from '../utils/logger.js';
+
 const router = express.Router();
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { pool } = require('../db');
-const { authenticateToken } = require('../middleware/auth');
-const { validateRegistration, validateLogin } = require('../validators/userValidators');
-const logger = require('../utils/logger');
 
 // User registration
 router.post('/register', validateRegistration, async (req, res) => {
@@ -108,4 +109,4 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

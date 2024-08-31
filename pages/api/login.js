@@ -35,21 +35,20 @@ export default async function handler(req, res) {
 
       console.log('Password match:', passwordMatch ? 'Yes' : 'No');
 
-      if (!passwordMatch) {
+      if (passwordMatch) {
+        console.log('Generating JWT...');
+        const token = jwt.sign(
+          { userId: user.id, email: user.email },
+          process.env.JWT_SECRET,
+          { expiresIn: '1h' }
+        );
+
+        console.log('JWT generated successfully');
+        res.status(200).json({ token, redirect: '/chat' });
+      } else {
         console.log('Password does not match, returning 401');
         return res.status(401).json({ error: 'Invalid email or password' });
       }
-
-      console.log('Generating JWT...');
-      console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
-      const token = jwt.sign(
-        { userId: user.id, email: user.email },
-        process.env.JWT_SECRET,
-        { expiresIn: '1h' }
-      );
-
-      console.log('JWT generated successfully');
-      res.status(200).json({ token });
     } finally {
       client.release();
       console.log('Database connection released');

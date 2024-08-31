@@ -1,6 +1,7 @@
-const express = require('express');
+import express from 'express';
+import { pool } from '../db.js';
+
 const router = express.Router();
-const { pool } = require('../db');
 
 // Send a message
 router.post('/', async (req, res) => {
@@ -17,4 +18,4 @@ router.put('/:messageId/read', async (req, res) => {
   // ... (mark message as read logic)
 });
 
-module.exports = router;
+export default router;

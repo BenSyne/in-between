@@ -1,6 +1,6 @@
-const { body, validationResult } = require('express-validator');
+import { body, validationResult } from 'express-validator';
 
-const validateRegistration = [
+export const validateRegistration = [
   body('username').isLength({ min: 3 }).trim().escape(),
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 6 }),
@@ -13,7 +13,7 @@ const validateRegistration = [
   },
 ];
 
-const validateLogin = [
+export const validateLogin = [
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 6 }),
   (req, res, next) => {
@@ -24,5 +24,3 @@ const validateLogin = [
     next();
   },
 ];
-
-module.exports = { validateRegistration, validateLogin };

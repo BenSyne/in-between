@@ -4,7 +4,7 @@ const app = require('./app'); // Your Express app
 const server = http.createServer(app);
 
 server.maxConnections = 1000; // Adjust this value as needed
-server.timeout = 120000; // Set timeout to 2 minutes (120000 ms)
+server.timeout = 300000; // Increase to 5 minutes (300000 ms)
 
 server.listen(3000, () => {
   console.log('Server running on port 3000');

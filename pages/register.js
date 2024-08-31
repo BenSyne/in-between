@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import styles from '../styles/Auth.module.css'
 
 export default function Register() {
@@ -62,6 +63,9 @@ export default function Register() {
         <button type="submit">Register</button>
       </form>
       {error && <p className={styles.error}>{error}</p>}
+      <p className={styles.switchAuth}>
+        Already have an account? <Link href="/login">Login here</Link>
+      </p>
     </div>
   )
 }
