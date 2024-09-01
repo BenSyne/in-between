@@ -1,6 +1,7 @@
 import { pool } from '../../../src/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { serialize } from 'cookie';
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
@@ -22,7 +23,7 @@ export default async function handler(req, res) {
       console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
       console.log('REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET ? 'Set' : 'Not set');
 
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
       
       let refreshToken;
       if (process.env.REFRESH_TOKEN_SECRET) {
@@ -36,10 +37,16 @@ export default async function handler(req, res) {
       if (refreshToken) {
         cookies.push(`refreshToken=${refreshToken}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`);
       }
-      res.setHeader('Set-Cookie', cookies);
+      res.setHeader('Set-Cookie', serialize('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== 'development',
+        sameSite: 'strict',
+        maxAge: 86400,
+        path: '/'
+      }));
 
       console.log('Tokens set in cookies');
-      res.status(200).json({ success: true });
+      res.status(200).json({ message: 'Logged in successfully' });
     } catch (error) {
       console.error('Error logging in:', error);
       res.status(500).json({ error: 'Internal server error' });

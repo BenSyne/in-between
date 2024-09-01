@@ -39,6 +39,11 @@ export default async function handler(req, res) {
     try {
       const { is_ai_chat, friend_id } = req.body;
       
+      // Prevent users from starting a chat with themselves
+      if (!is_ai_chat && friend_id === user.userId) {
+        return res.status(400).json({ error: 'You cannot start a chat with yourself' });
+      }
+
       // Start a transaction
       const client = await pool.connect();
       try {

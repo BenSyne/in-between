@@ -27,7 +27,8 @@ const FriendManagement = ({ friends, onStartChat, onFriendsUpdate }) => {
       const response = await fetch(`/api/users/search?term=${searchTerm}`, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        setSearchResults(data);
+        // Filter out the current user from search results
+        setSearchResults(data.filter(user => user.id !== currentUser.id));
       }
     } catch (error) {
       console.error('Error searching users:', error);

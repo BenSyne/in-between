@@ -30,6 +30,12 @@ const ChatDashboard = () => {
     }
   }, [selectedChat]);
 
+  useEffect(() => {
+    console.log('ChatDashboard - currentUser:', currentUser);
+    console.log('ChatDashboard - messages:', messages);
+    console.log('ChatDashboard - selectedChat:', selectedChat);
+  }, [currentUser, messages, selectedChat]);
+
   const fetchChats = async () => {
     try {
       const response = await fetch('/api/chats', { credentials: 'include' });
@@ -51,6 +57,9 @@ const ChatDashboard = () => {
       if (response.ok) {
         const data = await response.json();
         setCurrentUser(data);
+      } else if (response.status === 404) {
+        console.error('User profile not found. Redirecting to login.');
+        // Redirect to login page or show a message to the user
       } else {
         throw new Error('Failed to fetch current user');
       }
@@ -66,6 +75,9 @@ const ChatDashboard = () => {
       if (response.ok) {
         const data = await response.json();
         setUserProfile(data);
+      } else if (response.status === 404) {
+        console.error('User profile not found. Redirecting to profile creation.');
+        // Redirect to profile creation page or show a message to the user
       } else {
         throw new Error('Failed to fetch user profile');
       }
@@ -113,20 +125,21 @@ const ChatDashboard = () => {
     if (!selectedChat) return;
 
     try {
-      const userMessage = {
+      const tempUserMessage = {
         id: Date.now(),
         sender_id: currentUser.id,
+        sender_username: currentUser.username,
         content: content,
         sent_at: new Date().toISOString(),
       };
-      setMessages(prevMessages => [...prevMessages, userMessage]);
+      setMessages(prevMessages => [...prevMessages, tempUserMessage]);
 
       setIsAITyping(selectedChat.is_ai_chat);
 
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: selectedChat.id, content, userProfile }),
+        body: JSON.stringify({ chat_id: selectedChat.id, content }),
         credentials: 'include',
       });
 
@@ -139,13 +152,13 @@ const ChatDashboard = () => {
 
       if (selectedChat.is_ai_chat) {
         setMessages(prevMessages => [
-          ...prevMessages.filter(msg => msg.id !== userMessage.id),
+          ...prevMessages.filter(msg => msg.id !== tempUserMessage.id),
           data.userMessage,
           data.aiMessage
         ]);
       } else {
         setMessages(prevMessages => [
-          ...prevMessages.filter(msg => msg.id !== userMessage.id),
+          ...prevMessages.filter(msg => msg.id !== tempUserMessage.id),
           data.userMessage
         ]);
       }
@@ -159,6 +172,12 @@ const ChatDashboard = () => {
 
   const handleStartNewChat = async (isAIChat = false, friendId = null) => {
     try {
+      // Prevent starting a chat with oneself
+      if (!isAIChat && friendId === currentUser.id) {
+        setError("You can't start a chat with yourself.");
+        return;
+      }
+
       const response = await fetch('/api/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,7 +186,8 @@ const ChatDashboard = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start new chat');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to start new chat');
       }
 
       const newChat = await response.json();
@@ -176,7 +196,7 @@ const ChatDashboard = () => {
       setMessages([]);
     } catch (error) {
       console.error('Error starting new chat:', error);
-      setError('Failed to start new chat. Please try again.');
+      setError(error.message || 'Failed to start new chat. Please try again.');
     }
   };
 
@@ -232,6 +252,7 @@ const ChatDashboard = () => {
               currentUser={currentUser} 
               isAITyping={isAITyping}
               isAIChat={selectedChat.is_ai_chat}
+              otherUser={selectedChat.friend_username}
             />
             <MessageInput onSendMessage={handleSendMessage} />
           </>

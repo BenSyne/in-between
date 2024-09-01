@@ -18,24 +18,22 @@
 }
 
 .message {
-  max-width: 70%;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   padding: 10px;
-  border-radius: 18px;
-  position: relative;
-  clear: both;
+  border-radius: 10px;
+  max-width: 70%;
 }
 
-.sent {
-  float: right;
-  background-color: #dcf8c6;
+.currentUser {
   align-self: flex-end;
+  background-color: #dcf8c6;
+  margin-left: auto;
 }
 
-.received {
-  float: left;
-  background-color: #ffffff;
+.otherUser {
   align-self: flex-start;
+  background-color: #fff;
+  margin-right: auto;
 }
 
 .messageContent {
@@ -71,6 +69,11 @@
   background-color: #888;
   border-radius: 50%;
   animation: typing 1s infinite;
+}
+
+.sender {
+  font-weight: bold;
+  margin-bottom: 5px;
 }
 
 @keyframes typing {
