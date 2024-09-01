@@ -3,9 +3,7 @@ import styles from '../styles/ChatDashboard.module.css';
 import UserList from './UserList';
 import ChatWindow from './ChatWindow';
 import MessageInput from './MessageInput';
-import { refreshToken } from '../src/utils/auth';
-import { isAuthenticated } from '../utils/auth';
-import { useRouter } from 'next/router';
+import FriendManagement from './FriendManagement';
 
 const ChatDashboard = () => {
   const [selectedChat, setSelectedChat] = useState(null);
@@ -17,12 +15,13 @@ const ChatDashboard = () => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [chatToDelete, setChatToDelete] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const router = useRouter();
+  const [friends, setFriends] = useState([]);
 
   useEffect(() => {
     fetchChats();
     fetchCurrentUser();
     fetchUserProfile();
+    fetchFriends();
   }, []);
 
   useEffect(() => {
@@ -91,6 +90,21 @@ const ChatDashboard = () => {
     }
   };
 
+  const fetchFriends = async () => {
+    try {
+      const response = await fetch('/api/friends', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setFriends(data);
+      } else {
+        throw new Error('Failed to fetch friends');
+      }
+    } catch (error) {
+      console.error('Error fetching friends:', error);
+      setError('Failed to load friends. Please try again.');
+    }
+  };
+
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
   };
@@ -99,17 +113,15 @@ const ChatDashboard = () => {
     if (!selectedChat) return;
 
     try {
-      // Immediately add the user's message to the UI
       const userMessage = {
-        id: Date.now(), // Temporary ID
+        id: Date.now(),
         sender_id: currentUser.id,
         content: content,
         sent_at: new Date().toISOString(),
       };
       setMessages(prevMessages => [...prevMessages, userMessage]);
 
-      // Show AI is typing
-      setIsAITyping(true);
+      setIsAITyping(selectedChat.is_ai_chat);
 
       const response = await fetch('/api/messages', {
         method: 'POST',
@@ -125,29 +137,32 @@ const ChatDashboard = () => {
       const data = await response.json();
       console.log('Received response from server:', data);
 
-      // Update messages with the actual user message from the server and the AI response
-      setMessages(prevMessages => [
-        ...prevMessages.filter(msg => msg.id !== userMessage.id), // Remove the temporary user message
-        data.userMessage,
-        data.aiMessage
-      ]);
+      if (selectedChat.is_ai_chat) {
+        setMessages(prevMessages => [
+          ...prevMessages.filter(msg => msg.id !== userMessage.id),
+          data.userMessage,
+          data.aiMessage
+        ]);
+      } else {
+        setMessages(prevMessages => [
+          ...prevMessages.filter(msg => msg.id !== userMessage.id),
+          data.userMessage
+        ]);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
-      // Optionally, you can show an error message to the user here
+      setError('Failed to send message. Please try again.');
     } finally {
       setIsAITyping(false);
     }
   };
 
-  const handleStartNewChat = async (isAIChat = false) => {
+  const handleStartNewChat = async (isAIChat = false, friendId = null) => {
     try {
       const response = await fetch('/api/chats', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // Add this line if you're using JWT
-        },
-        body: JSON.stringify({ is_ai_chat: isAIChat, userProfile }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_ai_chat: isAIChat, friend_id: friendId }),
         credentials: 'include',
       });
 
@@ -158,11 +173,7 @@ const ChatDashboard = () => {
       const newChat = await response.json();
       setChats(prevChats => [newChat, ...prevChats]);
       setSelectedChat(newChat);
-      setMessages([]); // Clear messages for the new chat
-      if (isAIChat) {
-        // Add the initial AI message
-        setMessages([{ id: 'initial', sender_id: null, content: "Hello! How can I assist you today?", sent_at: new Date().toISOString() }]);
-      }
+      setMessages([]);
     } catch (error) {
       console.error('Error starting new chat:', error);
       setError('Failed to start new chat. Please try again.');
@@ -220,6 +231,7 @@ const ChatDashboard = () => {
               messages={messages} 
               currentUser={currentUser} 
               isAITyping={isAITyping}
+              isAIChat={selectedChat.is_ai_chat}
             />
             <MessageInput onSendMessage={handleSendMessage} />
           </>
@@ -229,6 +241,13 @@ const ChatDashboard = () => {
             <p>Select a chat or start a new one to begin messaging.</p>
           </div>
         )}
+      </div>
+      <div className={styles.friendManagement}>
+        <FriendManagement 
+          friends={friends} 
+          onStartChat={(friendId) => handleStartNewChat(false, friendId)}
+          onFriendsUpdate={fetchFriends}
+        />
       </div>
       {showDeleteConfirmation && (
         <div className={styles.deleteConfirmation}>

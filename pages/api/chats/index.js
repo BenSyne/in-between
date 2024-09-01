@@ -12,11 +12,18 @@ export default async function handler(req, res) {
     try {
       const result = await pool.query(`
         SELECT c.*, 
-          CASE WHEN c.is_ai_chat THEN NULL ELSE u.username END as friend_username,
+          CASE 
+            WHEN c.is_ai_chat THEN NULL 
+            ELSE (
+              SELECT u.username 
+              FROM chat_participants cp
+              JOIN users u ON cp.user_id = u.id
+              WHERE cp.chat_id = c.id AND cp.user_id != $1
+              LIMIT 1
+            )
+          END as friend_username,
           (SELECT COUNT(*) FROM messages WHERE chat_id = c.id) as message_count
         FROM chats c
-        LEFT JOIN chat_participants cp ON c.id = cp.chat_id
-        LEFT JOIN users u ON cp.user_id = u.id AND u.id != $1
         WHERE c.id IN (SELECT chat_id FROM chat_participants WHERE user_id = $1)
         ORDER BY c.updated_at DESC
       `, [user.userId]);
@@ -30,7 +37,7 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'POST') {
     try {
-      const { is_ai_chat } = req.body;
+      const { is_ai_chat, friend_id } = req.body;
       
       // Start a transaction
       const client = await pool.connect();
@@ -49,6 +56,14 @@ export default async function handler(req, res) {
           'INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2)',
           [newChat.id, user.userId]
         );
+
+        if (!is_ai_chat && friend_id) {
+          // Add the friend as a participant
+          await client.query(
+            'INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2)',
+            [newChat.id, friend_id]
+          );
+        }
 
         // Fetch user profile data
         const userProfileResult = await client.query(

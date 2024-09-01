@@ -1,61 +1,110 @@
 import React, { useState, useEffect } from 'react';
 import styles from '../styles/FriendManagement.module.css';
 
-const FriendManagement = () => {
-  const [friendRequests, setFriendRequests] = useState([]);
+const FriendManagement = ({ friends, onStartChat, onFriendsUpdate }) => {
+  const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [pendingRequests, setPendingRequests] = useState([]);
 
   useEffect(() => {
-    fetchFriendRequests();
+    fetchPendingRequests();
   }, []);
 
-  const fetchFriendRequests = async () => {
-    // Fetch friend requests logic
+  const fetchPendingRequests = async () => {
+    try {
+      const response = await fetch('/api/friends/pending', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setPendingRequests(data);
+      }
+    } catch (error) {
+      console.error('Error fetching pending requests:', error);
+    }
   };
 
   const handleSearch = async () => {
-    // Search users logic
+    try {
+      const response = await fetch(`/api/users/search?term=${searchTerm}`, { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data);
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+    }
   };
 
   const handleSendRequest = async (userId) => {
-    // Send friend request logic
+    try {
+      const response = await fetch('/api/friends/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiverId: userId }),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setSearchResults(prevResults => prevResults.filter(user => user.id !== userId));
+      }
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+    }
   };
 
   const handleAcceptRequest = async (requestId) => {
-    // Accept friend request logic
+    try {
+      const response = await fetch('/api/friends/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId }),
+        credentials: 'include',
+      });
+      if (response.ok) {
+        fetchPendingRequests();
+        onFriendsUpdate();
+      }
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
+    }
   };
 
   return (
     <div className={styles.friendManagement}>
-      <h2>Friend Requests</h2>
-      <ul>
-        {friendRequests.map(request => (
-          <li key={request.id}>
-            {request.sender.username}
-            <button onClick={() => handleAcceptRequest(request.id)}>Accept</button>
-          </li>
-        ))}
-      </ul>
-
-      <h2>Find Friends</h2>
-      <div className={styles.searchContainer}>
+      <h2>Friend Management</h2>
+      <div className={styles.searchSection}>
         <input
           type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search users"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search users..."
         />
         <button onClick={handleSearch}>Search</button>
       </div>
-      <ul>
+      <div className={styles.searchResults}>
         {searchResults.map(user => (
-          <li key={user.id}>
+          <div key={user.id} className={styles.userItem}>
             {user.username}
             <button onClick={() => handleSendRequest(user.id)}>Send Request</button>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
+      <h3>Pending Requests</h3>
+      <div className={styles.pendingRequests}>
+        {pendingRequests.map(request => (
+          <div key={request.id} className={styles.requestItem}>
+            {request.sender_username}
+            <button onClick={() => handleAcceptRequest(request.id)}>Accept</button>
+          </div>
+        ))}
+      </div>
+      <h3>Friends</h3>
+      <div className={styles.friendsList}>
+        {friends.map(friend => (
+          <div key={friend.id} className={styles.friendItem}>
+            {friend.username}
+            <button onClick={() => onStartChat(friend.id)}>Start Chat</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

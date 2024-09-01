@@ -27,22 +27,6 @@ export default async function handler(req, res) {
       const { chat_id, content } = req.body;
       console.log('Received message:', { chat_id, content });
 
-      // Fetch username and user profile in a single query
-      const userDataResult = await pool.query(`
-        SELECT u.username, up.*
-        FROM users u
-        LEFT JOIN user_profiles up ON u.id = up.user_id
-        WHERE u.id = $1
-      `, [user.userId]);
-      const userData = userDataResult.rows[0] || {};
-      console.log('User data fetched:', userData);
-
-      // Ensure username is included in userData
-      if (!userData.username) {
-        console.error('Username not found in user data');
-        return res.status(500).json({ error: 'Username not found' });
-      }
-
       // Check if the user is a participant in the chat
       const participantCheck = await pool.query(
         'SELECT * FROM chat_participants WHERE chat_id = $1 AND user_id = $2',
@@ -53,6 +37,10 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'You are not a participant in this chat' });
       }
 
+      // Check if it's an AI chat
+      const chatCheck = await pool.query('SELECT is_ai_chat FROM chats WHERE id = $1', [chat_id]);
+      const isAiChat = chatCheck.rows[0].is_ai_chat;
+
       // Insert user message
       const userMessageResult = await pool.query(
         'INSERT INTO messages (sender_id, chat_id, content) VALUES ($1, $2, $3) RETURNING *',
@@ -60,32 +48,39 @@ export default async function handler(req, res) {
       );
       console.log('User message stored:', userMessageResult.rows[0]);
 
-      // Fetch chat history
-      const chatHistoryResult = await pool.query(
-        'SELECT * FROM messages WHERE chat_id = $1 ORDER BY sent_at ASC LIMIT 10',
-        [chat_id]
-      );
-      console.log('Chat history fetched:', chatHistoryResult.rows.length, 'messages');
+      if (isAiChat) {
+        // Fetch chat history and generate AI response only for AI chats
+        const chatHistoryResult = await pool.query(
+          'SELECT * FROM messages WHERE chat_id = $1 ORDER BY sent_at ASC LIMIT 10',
+          [chat_id]
+        );
+        console.log('Chat history fetched:', chatHistoryResult.rows.length, 'messages');
 
-      // Generate AI response
-      console.log('User data being passed to processMessage:', userData);
-      console.log('user.userId:', user.userId);
-      console.log('Full userData being passed to processMessage:', { user_id: user.userId, ...userData });
-      const aiResponse = await processMessage(content, chatHistoryResult.rows, { user_id: user.userId, ...userData });
-      console.log('AI response generated:', aiResponse);
+        const userProfileResult = await pool.query(
+          'SELECT u.username, up.* FROM users u LEFT JOIN user_profiles up ON u.id = up.user_id WHERE u.id = $1',
+          [user.userId]
+        );
+        const userProfile = userProfileResult.rows[0];
 
-      // Insert AI responses
-      const aiMessageResult = await pool.query(
-        'INSERT INTO messages (sender_id, chat_id, content, is_ai_enhanced) VALUES ($1, $2, $3, $4) RETURNING *',
-        [null, chat_id, aiResponse, true]
-      );
-      console.log('AI message stored:', aiMessageResult.rows[0]);
+        const aiResponse = await processMessage(content, chatHistoryResult.rows, { user_id: user.userId, ...userProfile });
+        console.log('AI response generated:', aiResponse);
 
-      // Return both user message and AI response
-      res.status(201).json({
-        userMessage: userMessageResult.rows[0],
-        aiMessage: aiMessageResult.rows[0]
-      });
+        const aiMessageResult = await pool.query(
+          'INSERT INTO messages (sender_id, chat_id, content, is_ai_enhanced) VALUES ($1, $2, $3, $4) RETURNING *',
+          [null, chat_id, aiResponse, true]
+        );
+        console.log('AI message stored:', aiMessageResult.rows[0]);
+
+        res.status(201).json({
+          userMessage: userMessageResult.rows[0],
+          aiMessage: aiMessageResult.rows[0]
+        });
+      } else {
+        // For non-AI chats, just return the user message
+        res.status(201).json({
+          userMessage: userMessageResult.rows[0]
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       res.status(500).json({ error: 'Internal server error', details: error.message });

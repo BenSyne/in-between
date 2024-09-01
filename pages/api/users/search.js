@@ -4,8 +4,7 @@ import { authenticateToken } from '../../../src/middleware/auth';
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
-      const token = req.headers.authorization?.split(' ')[1];
-      const user = await authenticateToken(token);
+      const user = await authenticateToken(req);
       if (!user) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
@@ -16,7 +15,7 @@ export default async function handler(req, res) {
         [`%${term}%`, user.userId]
       );
 
-      res.json(result.rows);
+      res.status(200).json(result.rows);
     } catch (error) {
       console.error('Error searching users:', error);
       res.status(500).json({ error: 'Error searching users' });

@@ -4,15 +4,14 @@ import { authenticateToken } from '../../../src/middleware/auth';
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
-      const token = req.headers.authorization?.split(' ')[1];
-      const user = await authenticateToken(token);
+      const user = await authenticateToken(req);
       if (!user) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
       const { receiverId } = req.body;
       await pool.query(
-        'INSERT INTO friend_requests (sender_id, receiver_id) VALUES ($1, $2)',
+        'INSERT INTO friendships (user1_id, user2_id, status) VALUES ($1, $2, \'pending\')',
         [user.userId, receiverId]
       );
 
