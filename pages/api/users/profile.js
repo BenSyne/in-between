@@ -59,59 +59,23 @@ function sanitizeProfileData(obj) {
 }
 
 export default async function handler(req, res) {
-  const user = await authenticateToken(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  try {
+    const user = await authenticateToken(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
-  if (req.method === 'GET') {
-    try {
-      const result = await pool.query(`
-        SELECT u.username, up.*
-        FROM users u
-        LEFT JOIN user_profiles up ON u.id = up.user_id
-        WHERE u.id = $1
-      `, [user.userId]);
-      
-      if (result.rows.length > 0) {
-        res.status(200).json(result.rows[0]);
-      } else {
-        res.status(404).json({ error: 'Profile not found' });
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      res.status(500).json({ error: 'Internal server error' });
+    const { userId } = req.query;
+
+    const result = await pool.query('SELECT * FROM user_profiles WHERE user_id = $1', [userId || user.userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User profile not found' });
     }
-  } else if (req.method === 'PUT') {
-    try {
-      const sanitizedData = sanitizeProfileData(req.body);
-      const columns = Object.keys(sanitizedData).filter(key => key !== 'username');
-      const values = columns.map(col => sanitizedData[col]);
-      const setClause = columns.map((col, index) => `${col} = $${index + 2}`).join(', ');
-      const query = `
-        WITH updated_profile AS (
-          INSERT INTO user_profiles (user_id, ${columns.join(', ')})
-          VALUES ($1, ${columns.map((_, index) => `$${index + 2}`).join(', ')})
-          ON CONFLICT (user_id) DO UPDATE SET ${setClause}
-          RETURNING *
-        )
-        SELECT u.username, up.*
-        FROM users u
-        LEFT JOIN updated_profile up ON u.id = up.user_id
-        WHERE u.id = $1
-      `;
-      const result = await pool.query(query, [user.userId, ...values]);
-      
-      if (result.rows.length > 0) {
-        res.status(200).json(result.rows[0]);
-      } else {
-        res.status(404).json({ error: 'Profile not found' });
-      }
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  } else {
-    res.status(405).json({ error: 'Method not allowed' });
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }

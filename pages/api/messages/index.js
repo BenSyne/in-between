@@ -24,8 +24,24 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'POST') {
     try {
-      const { chat_id, content, userProfile } = req.body;
-      console.log('Received message:', { chat_id, content, userProfile });
+      const { chat_id, content } = req.body;
+      console.log('Received message:', { chat_id, content });
+
+      // Fetch username and user profile in a single query
+      const userDataResult = await pool.query(`
+        SELECT u.username, up.*
+        FROM users u
+        LEFT JOIN user_profiles up ON u.id = up.user_id
+        WHERE u.id = $1
+      `, [user.userId]);
+      const userData = userDataResult.rows[0] || {};
+      console.log('User data fetched:', userData);
+
+      // Ensure username is included in userData
+      if (!userData.username) {
+        console.error('Username not found in user data');
+        return res.status(500).json({ error: 'Username not found' });
+      }
 
       // Check if the user is a participant in the chat
       const participantCheck = await pool.query(
@@ -52,11 +68,13 @@ export default async function handler(req, res) {
       console.log('Chat history fetched:', chatHistoryResult.rows.length, 'messages');
 
       // Generate AI response
-      console.log('Generating AI response...');
-      const aiResponse = await processMessage(content, chatHistoryResult.rows, userProfile);
+      console.log('User data being passed to processMessage:', userData);
+      console.log('user.userId:', user.userId);
+      console.log('Full userData being passed to processMessage:', { user_id: user.userId, ...userData });
+      const aiResponse = await processMessage(content, chatHistoryResult.rows, { user_id: user.userId, ...userData });
       console.log('AI response generated:', aiResponse);
 
-      // Insert AI response
+      // Insert AI responses
       const aiMessageResult = await pool.query(
         'INSERT INTO messages (sender_id, chat_id, content, is_ai_enhanced) VALUES ($1, $2, $3, $4) RETURNING *',
         [null, chat_id, aiResponse, true]

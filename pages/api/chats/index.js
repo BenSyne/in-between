@@ -50,19 +50,18 @@ export default async function handler(req, res) {
           [newChat.id, user.userId]
         );
 
-        // If it's an AI chat, add an initial message from the AI
+        // Fetch user profile data
+        const userProfileResult = await client.query(
+          'SELECT u.username, up.* FROM users u LEFT JOIN user_profiles up ON u.id = up.user_id WHERE u.id = $1',
+          [user.userId]
+        );
+        const userProfile = userProfileResult.rows[0];
+
+        // Generate initial AI message
         if (is_ai_chat) {
-          // Fetch user profile
-          const profileResult = await client.query(
-            'SELECT * FROM user_profiles WHERE user_id = $1',
-            [user.userId]
-          );
-          const userProfile = profileResult.rows[0] || {};
-
-          // Generate initial AI message
           const initialPrompt = generateInitialPrompt(userProfile);
-          const aiResponse = await processMessage(initialPrompt);
-
+          const aiResponse = await processMessage(initialPrompt, [], { user_id: user.userId, ...userProfile });
+          
           await client.query(
             'INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3)',
             [newChat.id, null, aiResponse]
@@ -128,7 +127,7 @@ export default async function handler(req, res) {
 
 function generateInitialPrompt(userProfile) {
   const profileInfo = Object.entries(userProfile)
-    .filter(([key, value]) => value && key !== 'user_id')
+    .filter(([key, value]) => value && key !== 'user_id' && key !== 'username')
     .map(([key, value]) => `${key.replace(/_/g, ' ')}: ${Array.isArray(value) ? value.join(', ') : value}`)
     .join('\n');
 
@@ -136,5 +135,5 @@ function generateInitialPrompt(userProfile) {
 
 ${profileInfo}
 
-Based on this information, please greet the user and start a conversation that is tailored to their profile. Be friendly, empathetic, and show that you understand their background and preferences.`;
+Based on this information, please greet the user by name and start a conversation that is tailored to their profile. Be friendly, empathetic, and show that you understand their background and preferences.`;
 }
