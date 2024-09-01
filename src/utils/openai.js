@@ -5,49 +5,44 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function processMessage(message, chatHistory = [], userData = {}, isFirstMessage = false) {
+export async function processMessage(message, chatHistory = [], userProfile = {}, isFirstMessage = false) {
   try {
-    console.log('Received userData in processMessage:', userData);
-    console.log('user_id in userData:', userData.user_id);
+    console.log('Processing message:', { message, isFirstMessage });
+    console.log('Received userProfile in processMessage:', userProfile);
     
-    let profileData;
-    let userName = 'User';
-
-    if (userData.user_id) {
-      console.log('Attempting to fetch user profile with user_id:', userData.user_id);
-      profileData = await fetchUserProfile(userData.user_id);
-      console.log('User profile data fetched:', profileData);
-      userName = profileData.username || 'User';
-    } else {
-      console.warn('No user_id provided in userData, using default profile');
-      profileData = { username: 'User' };
-    }
-
+    const userName = userProfile.username || 'User';
     console.log('Username for message:', userName);
 
-    const systemMessage = generateSystemMessage(profileData, isFirstMessage, userName);
-    console.log('Final system message:', systemMessage);
+    let messages = [];
 
-    const messages = [
-      { role: "system", content: systemMessage },
-      ...chatHistory.map(msg => ({
+    if (isFirstMessage) {
+      const systemMessage = generateSystemMessage(userProfile, isFirstMessage, userName);
+      console.log('System message for first interaction:', systemMessage);
+      messages = [
+        { role: "system", content: systemMessage },
+        { role: "user", content: "Start a new conversation" }
+      ];
+    } else {
+      console.log('Chat history length:', chatHistory.length);
+      messages = chatHistory.map(msg => ({
         role: msg.sender_id === null ? 'assistant' : 'user',
         content: msg.content
-      })),
-    ];
-
-    if (!isFirstMessage) {
+      }));
       messages.push({ role: "user", content: message });
     }
 
     console.log('Sending messages to OpenAI:', JSON.stringify(messages, null, 2));
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-0613", // Make sure this is the correct model name
+      model: "gpt-4-0613",
       messages: messages,
     });
 
+    console.log('Received response from OpenAI');
+
     let aiResponse = completion.choices[0].message.content;
+
+    console.log('AI response:', aiResponse);
 
     return {
       content: aiResponse,
@@ -57,54 +52,11 @@ export async function processMessage(message, chatHistory = [], userData = {}, i
     };
   } catch (error) {
     console.error('Error processing message with OpenAI:', error);
-    return {
-      content: "I'm sorry, I couldn't process that message. Could you try again?",
-      sender_id: null,
-      sender_username: 'AI',
-      sent_at: new Date().toISOString()
-    };
+    throw error;
   }
 }
 
-async function fetchUserProfile(userId) {
-  try {
-    console.log('Fetching user profile for user ID:', userId);
-    
-    if (!userId) {
-      console.error('No user ID provided to fetchUserProfile');
-      throw new Error('No user ID provided');
-    }
-
-    const result = await pool.query(
-      `SELECT u.username, up.* 
-       FROM users u 
-       LEFT JOIN user_profiles up ON u.id = up.user_id 
-       WHERE u.id = $1`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      console.error('No user found for ID:', userId);
-      throw new Error('User profile not found');
-    }
-
-    const profileData = result.rows[0];
-    console.log('Fetched user profile:', profileData);
-    return profileData;
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    // Return a default profile instead of null
-    return {
-      username: 'User',
-      // Add other default profile fields as needed
-    };
-  }
-}
-
-function generateSystemMessage(profileData, isFirstMessage, userName) {
-  console.log('Generating system message with profile data:', profileData);
-  console.log('Username for system message:', userName);
-
+function generateSystemMessage(userProfile, isFirstMessage, userName) {
   const currentDate = new Date();
   const formattedDate = currentDate.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -118,7 +70,7 @@ function generateSystemMessage(profileData, isFirstMessage, userName) {
     hour12: true
   });
 
-  const profileInfo = profileData ? Object.entries(profileData)
+  const profileInfo = userProfile ? Object.entries(userProfile)
     .filter(([key, value]) => value && key !== 'user_id' && key !== 'username')
     .map(([key, value]) => `${key.replace(/_/g, ' ')}: ${Array.isArray(value) ? value.join(', ') : value}`)
     .join('\n')
@@ -163,7 +115,7 @@ export async function enhanceMessage(content, userProfile = {}) {
         { role: "system", content: systemMessage },
         { role: "user", content: `Enhance this message to make it sound nicer and more clear, but keep the original meaning: "${content}"` }
       ],
-      max_tokens: 150
+      max_tokens: 2000
     });
 
     return response.choices[0].message.content.trim();

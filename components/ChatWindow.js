@@ -4,12 +4,6 @@ import styles from '../styles/ChatWindow.module.css';
 const ChatWindow = ({ messages, currentUser, isAITyping, isAIChat, otherUser }) => {
   const messagesEndRef = useRef(null);
 
-  useEffect(() => {
-    console.log('ChatWindow - currentUser:', currentUser);
-    console.log('ChatWindow - messages:', messages);
-    console.log('ChatWindow - otherUser:', otherUser);
-  }, [currentUser, messages, otherUser]);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -18,11 +12,11 @@ const ChatWindow = ({ messages, currentUser, isAITyping, isAIChat, otherUser }) 
 
   const renderMessage = (message, index) => {
     const isCurrentUser = message.sender_id === currentUser?.id;
-    const senderName = isCurrentUser ? currentUser?.username : (message.sender_username || (isAIChat && message.sender_id === null ? 'AI' : otherUser));
+    const senderName = isCurrentUser ? currentUser?.username : (isAIChat ? 'AI' : otherUser);
 
     return (
       <div key={message.id || `message-${index}`} className={`${styles.messageWrapper} ${isCurrentUser ? styles.currentUser : styles.otherUser}`}>
-        <div className={styles.messageBubble}>
+        <div className={`${styles.messageBubble} ${isAIChat && !isCurrentUser ? styles.aiMessage : ''}`}>
           <span className={styles.sender}>{senderName}</span>
           <p>{message.content}</p>
           <small>{new Date(message.sent_at).toLocaleTimeString()}</small>
@@ -36,7 +30,7 @@ const ChatWindow = ({ messages, currentUser, isAITyping, isAIChat, otherUser }) 
       {messages.map((message, index) => renderMessage(message, index))}
       {isAITyping && (
         <div className={`${styles.messageWrapper} ${styles.otherUser}`}>
-          <div className={`${styles.messageBubble} ${styles.typing}`}>
+          <div className={`${styles.messageBubble} ${styles.typing} ${styles.aiMessage}`}>
             <span className={styles.sender}>AI</span>
             <p>Typing...</p>
           </div>

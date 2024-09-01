@@ -172,10 +172,25 @@ const ChatDashboard = () => {
           setIsAITyping(false);
         }, 1000);
       }
+
+      // Handle new tokens if they were generated
+      if (data.newTokens) {
+        // Update your client-side auth state with the new tokens
+        // This depends on how you're managing auth state in your app
+        updateAuthTokens(data.newTokens);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       setError('Failed to send message. Please try again.');
     }
+  };
+
+  // Add this function to update your auth state
+  const updateAuthTokens = (newTokens) => {
+    // Update your client-side auth state
+    // This could involve storing the new tokens in localStorage, 
+    // updating a global state, or whatever method you're using for auth
+    console.log('Updating auth tokens:', newTokens);
   };
 
   const handleStartNewChat = async (isAIChat, friendId = null) => {

@@ -63,33 +63,40 @@ export default async function handler(req, res) {
         console.log('AI message stored:', aiMessageResult.rows[0]);
       }
 
-      // Generate new tokens
-      const newToken = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
-      const newRefreshToken = jwt.sign({ userId: user.userId }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+      // Generate new tokens only if JWT_SECRET is available
+      let newToken = null;
+      let newRefreshToken = null;
+      if (process.env.JWT_SECRET && process.env.REFRESH_TOKEN_SECRET) {
+        newToken = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        newRefreshToken = jwt.sign({ userId: user.userId }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 
-      // Set cookies and headers
-      res.setHeader('Set-Cookie', [
-        serialize('token', newToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV !== 'development',
-          sameSite: 'strict',
-          maxAge: 3600,
-          path: '/'
-        }),
-        serialize('refreshToken', newRefreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV !== 'development',
-          sameSite: 'strict',
-          maxAge: 604800,
-          path: '/'
-        })
-      ]);
-      res.setHeader('X-New-Token', newToken);
-      res.setHeader('X-New-Refresh-Token', newRefreshToken);
+        // Set cookies and headers
+        res.setHeader('Set-Cookie', [
+          serialize('token', newToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV !== 'development',
+            sameSite: 'strict',
+            maxAge: 3600,
+            path: '/'
+          }),
+          serialize('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV !== 'development',
+            sameSite: 'strict',
+            maxAge: 604800,
+            path: '/'
+          })
+        ]);
+        res.setHeader('X-New-Token', newToken);
+        res.setHeader('X-New-Refresh-Token', newRefreshToken);
+      } else {
+        console.warn('JWT_SECRET or REFRESH_TOKEN_SECRET not set. Skipping token generation.');
+      }
 
       res.status(201).json({
         userMessage: userMessageResult.rows[0],
-        aiMessage: aiMessageResult ? aiMessageResult.rows[0] : null
+        aiMessage: aiMessageResult ? aiMessageResult.rows[0] : null,
+        newTokens: newToken && newRefreshToken ? { token: newToken, refreshToken: newRefreshToken } : null
       });
     } catch (error) {
       console.error('Error sending message:', error);

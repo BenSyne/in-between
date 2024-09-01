@@ -20,29 +20,28 @@ export default async function handler(req, res) {
 
       // Fetch user profile
       const userProfile = await fetchUserProfile(user.userId);
+      if (!userProfile) {
+        return res.status(404).json({ error: 'User profile not found' });
+      }
+
+      // Fetch chat history
+      const chatHistory = await fetchChatHistory(chatId);
 
       let aiResponse;
-      let userMessageResult = null;
-
-      if (isFirstMessage) {
-        // Generate the initial AI message
-        aiResponse = await processMessage('', [], userProfile, true);
-      } else {
-        // Store user message
-        userMessageResult = await pool.query(
-          'INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3) RETURNING *',
-          [chatId, user.userId, message]
-        );
-
-        // Fetch chat history
-        const chatHistory = await fetchChatHistory(chatId);
-
-        // Process the message with AI
-        aiResponse = await processMessage(message, chatHistory, userProfile);
+      try {
+        if (isFirstMessage) {
+          aiResponse = await processMessage('', chatHistory, userProfile, true);
+        } else {
+          const updatedChatHistory = [...chatHistory, { sender_id: user.userId, content: message }];
+          aiResponse = await processMessage(message, updatedChatHistory, userProfile);
+        }
+      } catch (error) {
+        console.error('Error processing message:', error);
+        return res.status(500).json({ error: 'Failed to generate AI response' });
       }
 
       if (!aiResponse || !aiResponse.content) {
-        throw new Error('Failed to generate AI response');
+        return res.status(500).json({ error: 'Invalid AI response generated' });
       }
 
       // Store AI response
@@ -52,7 +51,6 @@ export default async function handler(req, res) {
       );
 
       res.status(200).json({
-        userMessage: isFirstMessage ? null : userMessageResult.rows[0],
         aiMessage: aiMessageResult.rows[0]
       });
     } catch (error) {
@@ -74,7 +72,10 @@ async function fetchChatHistory(chatId) {
 
 async function fetchUserProfile(userId) {
   const result = await pool.query(
-    'SELECT * FROM user_profiles WHERE user_id = $1',
+    `SELECT up.*, u.username 
+     FROM user_profiles up 
+     JOIN users u ON up.user_id = u.id 
+     WHERE up.user_id = $1`,
     [userId]
   );
   return result.rows[0] || {};
