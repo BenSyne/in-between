@@ -1,6 +1,5 @@
 import { pool } from '../../../src/db';
 import { authenticateToken } from '../../../src/middleware/auth';
-import { processMessage } from '../../../src/utils/openai';
 
 export default async function handler(req, res) {
   const user = await authenticateToken(req);
@@ -10,6 +9,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
+      console.log('Fetching chats for user:', user.userId);
       const result = await pool.query(`
         SELECT c.*, 
           CASE 
@@ -24,16 +24,18 @@ export default async function handler(req, res) {
           END as friend_username,
           (SELECT COUNT(*) FROM messages WHERE chat_id = c.id) as message_count
         FROM chats c
-        WHERE c.id IN (SELECT chat_id FROM chat_participants WHERE user_id = $1)
+        JOIN chat_participants cp ON c.id = cp.chat_id
+        WHERE cp.user_id = $1
         ORDER BY c.updated_at DESC
       `, [user.userId]);
 
-      const validChats = result.rows.filter(chat => chat.message_count > 0);
-      console.log('Fetched chats:', validChats);
+      console.log('Query result:', result.rows);
+      const validChats = result.rows.filter(chat => chat.message_count > 0 || chat.is_ai_chat);
+      console.log('Filtered chats:', validChats);
       res.status(200).json(validChats);
     } catch (error) {
       console.error('Error fetching chats:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Internal server error', details: error.message });
     }
   } else if (req.method === 'POST') {
     try {
@@ -70,24 +72,6 @@ export default async function handler(req, res) {
           );
         }
 
-        // Fetch user profile data
-        const userProfileResult = await client.query(
-          'SELECT u.username, up.* FROM users u LEFT JOIN user_profiles up ON u.id = up.user_id WHERE u.id = $1',
-          [user.userId]
-        );
-        const userProfile = userProfileResult.rows[0];
-
-        // Generate initial AI message
-        if (is_ai_chat) {
-          const initialPrompt = generateInitialPrompt(userProfile);
-          const aiResponse = await processMessage(initialPrompt, [], { user_id: user.userId, ...userProfile });
-          
-          await client.query(
-            'INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3)',
-            [newChat.id, null, aiResponse]
-          );
-        }
-
         await client.query('COMMIT');
         res.status(201).json(newChat);
       } catch (error) {
@@ -102,13 +86,16 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'DELETE') {
     const { chatId } = req.query;
-
     if (!chatId) {
       return res.status(400).json({ error: 'Chat ID is required' });
     }
 
-    const client = await pool.connect();
+    let client;
     try {
+      console.log('Deleting chat:', chatId);
+
+      // Start a transaction
+      client = await pool.connect();
       await client.query('BEGIN');
 
       // Check if the user is a participant in the chat
@@ -122,7 +109,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'You are not a participant in this chat' });
       }
 
-      // Delete messages associated with the chat
+      // Delete messages
       await client.query('DELETE FROM messages WHERE chat_id = $1', [chatId]);
 
       // Delete chat participants
@@ -134,26 +121,13 @@ export default async function handler(req, res) {
       await client.query('COMMIT');
       res.status(200).json({ message: 'Chat deleted successfully' });
     } catch (error) {
-      await client.query('ROLLBACK');
+      if (client) await client.query('ROLLBACK');
       console.error('Error deleting chat:', error);
-      res.status(500).json({ error: 'Failed to delete chat' });
+      res.status(500).json({ error: 'Failed to delete chat', details: error.message });
     } finally {
-      client.release();
+      if (client) client.release();
     }
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }
-}
-
-function generateInitialPrompt(userProfile) {
-  const profileInfo = Object.entries(userProfile)
-    .filter(([key, value]) => value && key !== 'user_id' && key !== 'username')
-    .map(([key, value]) => `${key.replace(/_/g, ' ')}: ${Array.isArray(value) ? value.join(', ') : value}`)
-    .join('\n');
-
-  return `Here is the user's information:
-
-${profileInfo}
-
-Based on this information, please greet the user by name and start a conversation that is tailored to their profile. Be friendly, empathetic, and show that you understand their background and preferences.`;
 }

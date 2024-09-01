@@ -5,13 +5,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function processMessage(message, chatHistory = [], userData = {}) {
-  console.log('Received userData in processMessage:', userData);
-  console.log('user_id in userData:', userData.user_id);
-  
+export async function processMessage(message, chatHistory = [], userData = {}, isFirstMessage = false) {
   try {
-    console.log('Processing message with OpenAI:', { message, chatHistory, userData });
-
+    console.log('Received userData in processMessage:', userData);
+    console.log('user_id in userData:', userData.user_id);
+    
     let profileData;
     let userName = 'User';
 
@@ -27,9 +25,6 @@ export async function processMessage(message, chatHistory = [], userData = {}) {
 
     console.log('Username for message:', userName);
 
-    const isFirstMessage = !chatHistory.some(msg => msg.sender_id !== null);
-    console.log('Is this the first message?', isFirstMessage);
-
     const systemMessage = generateSystemMessage(profileData, isFirstMessage, userName);
     console.log('Final system message:', systemMessage);
 
@@ -39,29 +34,35 @@ export async function processMessage(message, chatHistory = [], userData = {}) {
         role: msg.sender_id === null ? 'assistant' : 'user',
         content: msg.content
       })),
-      { role: "user", content: message }
     ];
+
+    if (!isFirstMessage) {
+      messages.push({ role: "user", content: message });
+    }
 
     console.log('Sending messages to OpenAI:', JSON.stringify(messages, null, 2));
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4-0613", // Make sure this is the correct model name
       messages: messages,
     });
 
-    console.log('Received response from OpenAI:', completion.choices[0].message);
-
     let aiResponse = completion.choices[0].message.content;
 
-    console.log('Original AI response:', aiResponse);
-    console.log('Does the response include the username?', aiResponse.toLowerCase().includes(userName.toLowerCase()));
-
-    console.log('Final AI response:', aiResponse);
-
-    return aiResponse;
+    return {
+      content: aiResponse,
+      sender_id: null,
+      sender_username: 'AI',
+      sent_at: new Date().toISOString()
+    };
   } catch (error) {
     console.error('Error processing message with OpenAI:', error);
-    return "I'm sorry, I couldn't process that message. Could you try again?";
+    return {
+      content: "I'm sorry, I couldn't process that message. Could you try again?",
+      sender_id: null,
+      sender_username: 'AI',
+      sent_at: new Date().toISOString()
+    };
   }
 }
 

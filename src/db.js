@@ -1,14 +1,20 @@
-import pg from 'pg';
-const { Pool } = pg;
-
+import { Pool } from 'pg';
+ 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-export const query = async (text, params) => {
+pool.on('connect', () => {
+  console.log('Connected to the database');
+});
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
+});
+
+const query = async (text, params) => {
   const client = await pool.connect();
   try {
     const result = await client.query(text, params);
@@ -18,4 +24,4 @@ export const query = async (text, params) => {
   }
 };
 
-export { pool };
+export { pool, query };

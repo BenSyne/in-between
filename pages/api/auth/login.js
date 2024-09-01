@@ -33,20 +33,27 @@ export default async function handler(req, res) {
       }
 
       // Set HTTP-only cookies
-      const cookies = [`token=${token}; HttpOnly; Path=/; Max-Age=3600; SameSite=Lax`];
-      if (refreshToken) {
-        cookies.push(`refreshToken=${refreshToken}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`);
-      }
-      res.setHeader('Set-Cookie', serialize('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV !== 'development',
-        sameSite: 'strict',
-        maxAge: 86400,
-        path: '/'
-      }));
+      res.setHeader('Set-Cookie', [
+        serialize('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV !== 'development',
+          sameSite: 'strict',
+          maxAge: 86400,
+          path: '/'
+        }),
+        ...(refreshToken ? [
+          serialize('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV !== 'development',
+            sameSite: 'strict',
+            maxAge: 604800,
+            path: '/'
+          })
+        ] : [])
+      ]);
 
       console.log('Tokens set in cookies');
-      res.status(200).json({ message: 'Logged in successfully' });
+      res.status(200).json({ success: true, message: 'Logged in successfully' });
     } catch (error) {
       console.error('Error logging in:', error);
       res.status(500).json({ error: 'Internal server error' });

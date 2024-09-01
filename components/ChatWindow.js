@@ -16,13 +16,13 @@ const ChatWindow = ({ messages, currentUser, isAITyping, isAIChat, otherUser }) 
 
   useEffect(scrollToBottom, [messages]);
 
-  const renderMessage = (message) => {
-    const isCurrentUser = message.sender_id === currentUser.id;
-    const senderName = message.sender_username || (message.sender_id === null ? 'AI' : otherUser);
+  const renderMessage = (message, index) => {
+    const isCurrentUser = message.sender_id === currentUser?.id;
+    const senderName = isCurrentUser ? currentUser?.username : (message.sender_username || (isAIChat && message.sender_id === null ? 'AI' : otherUser));
 
     return (
-      <div key={message.id} className={`${styles.message} ${isCurrentUser ? styles.currentUser : styles.otherUser}`}>
-        <div className={styles.messageContent}>
+      <div key={message.id || `message-${index}`} className={`${styles.messageWrapper} ${isCurrentUser ? styles.currentUser : styles.otherUser}`}>
+        <div className={styles.messageBubble}>
           <span className={styles.sender}>{senderName}</span>
           <p>{message.content}</p>
           <small>{new Date(message.sent_at).toLocaleTimeString()}</small>
@@ -33,10 +33,10 @@ const ChatWindow = ({ messages, currentUser, isAITyping, isAIChat, otherUser }) 
 
   return (
     <div className={styles.chatWindow}>
-      {messages.map(renderMessage)}
+      {messages.map((message, index) => renderMessage(message, index))}
       {isAITyping && (
-        <div className={`${styles.message} ${styles.otherUser} ${styles.typing}`}>
-          <div className={styles.messageContent}>
+        <div className={`${styles.messageWrapper} ${styles.otherUser}`}>
+          <div className={`${styles.messageBubble} ${styles.typing}`}>
             <span className={styles.sender}>AI</span>
             <p>Typing...</p>
           </div>

@@ -4,6 +4,7 @@ import UserList from './UserList';
 import ChatWindow from './ChatWindow';
 import MessageInput from './MessageInput';
 import FriendManagement from './FriendManagement';
+import AIChat from './AIChat';
 
 const ChatDashboard = () => {
   const [selectedChat, setSelectedChat] = useState(null);
@@ -26,7 +27,7 @@ const ChatDashboard = () => {
 
   useEffect(() => {
     if (selectedChat) {
-      fetchMessages(selectedChat.id);
+      fetchMessages();
     }
   }, [selectedChat]);
 
@@ -38,12 +39,20 @@ const ChatDashboard = () => {
 
   const fetchChats = async () => {
     try {
-      const response = await fetch('/api/chats', { credentials: 'include' });
+      console.log('Fetching chats...');
+      const response = await fetch('/api/chats', { 
+        method: 'GET',
+        credentials: 'include' 
+      });
+      console.log('Fetch response:', response.status, response.statusText);
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched chats:', data);
         setChats(data);
       } else {
-        throw new Error('Failed to fetch chats');
+        const errorData = await response.json();
+        console.error('Error fetching chats:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch chats');
       }
     } catch (error) {
       console.error('Error fetching chats:', error);
@@ -87,14 +96,22 @@ const ChatDashboard = () => {
     }
   };
 
-  const fetchMessages = async (chatId) => {
+  const fetchMessages = async () => {
+    if (!selectedChat) return;
     try {
-      const response = await fetch(`/api/messages?chatId=${chatId}`, { credentials: 'include' });
+      console.log('Fetching messages for chat:', selectedChat.id);
+      const response = await fetch(`/api/messages?chatId=${selectedChat.id}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
-        setMessages(data.messages);
+        console.log('Fetched messages:', data);
+        setMessages(data);
       } else {
-        throw new Error('Failed to fetch messages');
+        const errorData = await response.json();
+        console.error('Error fetching messages:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch messages');
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -125,21 +142,16 @@ const ChatDashboard = () => {
     if (!selectedChat) return;
 
     try {
-      const tempUserMessage = {
-        id: Date.now(),
-        sender_id: currentUser.id,
-        sender_username: currentUser.username,
-        content: content,
-        sent_at: new Date().toISOString(),
-      };
-      setMessages(prevMessages => [...prevMessages, tempUserMessage]);
-
-      setIsAITyping(selectedChat.is_ai_chat);
-
       const response = await fetch('/api/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: selectedChat.id, content }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId: selectedChat.id,
+          content: content,
+          isAIChat: selectedChat.is_ai_chat,
+        }),
         credentials: 'include',
       });
 
@@ -148,55 +160,52 @@ const ChatDashboard = () => {
       }
 
       const data = await response.json();
-      console.log('Received response from server:', data);
+      console.log('Message sent, received data:', data);
 
-      if (selectedChat.is_ai_chat) {
-        setMessages(prevMessages => [
-          ...prevMessages.filter(msg => msg.id !== tempUserMessage.id),
-          data.userMessage,
-          data.aiMessage
-        ]);
-      } else {
-        setMessages(prevMessages => [
-          ...prevMessages.filter(msg => msg.id !== tempUserMessage.id),
-          data.userMessage
-        ]);
+      setMessages(prevMessages => [...prevMessages, data.userMessage]);
+
+      if (selectedChat.is_ai_chat && data.aiMessage) {
+        setIsAITyping(true);
+        // Simulate AI typing delay
+        setTimeout(() => {
+          setMessages(prevMessages => [...prevMessages, data.aiMessage]);
+          setIsAITyping(false);
+        }, 1000);
       }
     } catch (error) {
       console.error('Error sending message:', error);
       setError('Failed to send message. Please try again.');
-    } finally {
-      setIsAITyping(false);
     }
   };
 
-  const handleStartNewChat = async (isAIChat = false, friendId = null) => {
+  const handleStartNewChat = async (isAIChat, friendId = null) => {
     try {
-      // Prevent starting a chat with oneself
-      if (!isAIChat && friendId === currentUser.id) {
-        setError("You can't start a chat with yourself.");
-        return;
-      }
-
       const response = await fetch('/api/chats', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ is_ai_chat: isAIChat, friend_id: friendId }),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start new chat');
+        throw new Error('Failed to create new chat');
       }
 
       const newChat = await response.json();
-      setChats(prevChats => [newChat, ...prevChats]);
+      setChats([newChat, ...chats]);
       setSelectedChat(newChat);
       setMessages([]);
+
+      if (isAIChat) {
+        // Send initial AI greeting
+        const aiGreeting = await onSendMessage("Hello! How can I assist you today?", newChat.id, []);
+        setMessages([aiGreeting]);
+      }
     } catch (error) {
       console.error('Error starting new chat:', error);
-      setError(error.message || 'Failed to start new chat. Please try again.');
+      setError('Failed to start new chat. Please try again.');
     }
   };
 
@@ -209,17 +218,15 @@ const ChatDashboard = () => {
         credentials: 'include',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete chat');
-      }
-
-      setChats(prevChats => prevChats.filter(chat => chat.id !== chatToDelete.id));
-      if (selectedChat && selectedChat.id === chatToDelete.id) {
+      if (response.ok) {
+        setChats(prevChats => prevChats.filter(chat => chat.id !== chatToDelete.id));
         setSelectedChat(null);
-        setMessages([]);
+        setShowDeleteConfirmation(false);
+        setChatToDelete(null);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete chat');
       }
-      setShowDeleteConfirmation(false);
-      setChatToDelete(null);
     } catch (error) {
       console.error('Error deleting chat:', error);
       setError('Failed to delete chat. Please try again.');
@@ -229,6 +236,84 @@ const ChatDashboard = () => {
   const openDeleteConfirmation = (chat) => {
     setChatToDelete(chat);
     setShowDeleteConfirmation(true);
+  };
+
+  const onSendMessage = async (content, chatId, chatHistory) => {
+    try {
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          chatId: chatId,
+          chatHistory: chatHistory,
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  };
+
+  const sendUserMessage = async (content, chatId) => {
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: content,
+          chatId: chatId,
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error sending user message:', error);
+      throw error;
+    }
+  };
+
+  const handleAddFriend = async (friendUsername) => {
+    try {
+      const response = await fetch('/api/friends/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ friendUsername }),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        // Friend added successfully
+        fetchFriends(); // Refresh the friends list
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to add friend');
+      }
+    } catch (error) {
+      console.error('Error adding friend:', error);
+      setError('An error occurred while adding friend');
+    }
   };
 
   return (
@@ -246,16 +331,25 @@ const ChatDashboard = () => {
       <div className={styles.chatArea}>
         {error && <div className={styles.errorMessage}>{error}</div>}
         {selectedChat ? (
-          <>
-            <ChatWindow 
-              messages={messages} 
-              currentUser={currentUser} 
-              isAITyping={isAITyping}
-              isAIChat={selectedChat.is_ai_chat}
-              otherUser={selectedChat.friend_username}
+          selectedChat.is_ai_chat ? (
+            <AIChat
+              chatId={selectedChat.id}
+              onSendMessage={handleSendMessage}
+              initialMessages={messages}
+              currentUser={currentUser}
             />
-            <MessageInput onSendMessage={handleSendMessage} />
-          </>
+          ) : (
+            <>
+              <ChatWindow 
+                messages={messages} 
+                currentUser={currentUser} 
+                isAITyping={isAITyping}
+                isAIChat={selectedChat.is_ai_chat}
+                otherUser={selectedChat.is_ai_chat ? 'AI' : selectedChat.friend_username}
+              />
+              <MessageInput onSendMessage={handleSendMessage} />
+            </>
+          )
         ) : (
           <div className={styles.welcomeMessage}>
             <h2>Welcome to the Chat</h2>
@@ -266,6 +360,7 @@ const ChatDashboard = () => {
       <div className={styles.friendManagement}>
         <FriendManagement 
           friends={friends} 
+          onAddFriend={handleAddFriend}
           onStartChat={(friendId) => handleStartNewChat(false, friendId)}
           onFriendsUpdate={fetchFriends}
         />

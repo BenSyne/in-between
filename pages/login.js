@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import styles from '../styles/Login.module.css';
+import styles from '../styles/Auth.module.css';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,16 +19,13 @@ export default function Login() {
         credentials: 'include',
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          router.push('/chat');
-        } else {
-          setError('Login failed');
-        }
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Trigger a page reload to update the UI
+        window.location.href = '/chat';
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Invalid email or password');
+        setError(data.error || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
