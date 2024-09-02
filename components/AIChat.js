@@ -54,6 +54,7 @@ const AIChat = ({ chatId, onSendMessage, initialMessages, currentUser }) => {
     } catch (error) {
       console.error('Error in handleFirstAIMessage:', error);
       setMessages([{ content: "I'm sorry, I'm having trouble connecting. Please try again later.", sender_id: null, sender_username: 'AI', sent_at: new Date().toISOString() }]);
+      throw error; // Propagate the error to be caught in handleStartNewChat
     } finally {
       setIsAITyping(false);
     }

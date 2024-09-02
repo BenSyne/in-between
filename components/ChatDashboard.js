@@ -209,14 +209,20 @@ const ChatDashboard = () => {
       }
 
       const newChat = await response.json();
-      setChats([newChat, ...chats]);
+      setChats(prevChats => [newChat, ...prevChats]);
       setSelectedChat(newChat);
       setMessages([]);
 
+      // Reset the AI typing state
+      setIsAITyping(false);
+
+      // Clear any previous error
+      setError(null);
+
+      // If it's an AI chat, the AIChat component will handle the first message
       if (isAIChat) {
-        // Send initial AI greeting
-        const aiGreeting = await onSendMessage("Hello! How can I assist you today?", newChat.id, []);
-        setMessages([aiGreeting]);
+        // Trigger a re-render of AIChat component
+        setSelectedChat({...newChat});
       }
     } catch (error) {
       console.error('Error starting new chat:', error);
@@ -348,6 +354,7 @@ const ChatDashboard = () => {
         {selectedChat ? (
           selectedChat.is_ai_chat ? (
             <AIChat
+              key={selectedChat.id}
               chatId={selectedChat.id}
               onSendMessage={handleSendMessage}
               initialMessages={messages}

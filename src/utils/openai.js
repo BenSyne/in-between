@@ -12,22 +12,22 @@ export async function processMessage(message, chatHistory = [], userProfile = {}
     
     const userName = userProfile.username || 'User';
     console.log('Username for message:', userName);
-
+    
     let messages = [];
 
+    // Always include the system message
+    const systemMessage = generateSystemMessage(userProfile, isFirstMessage, userName);
+    console.log('System message:', systemMessage);
+    messages.push({ role: "system", content: systemMessage });
+
     if (isFirstMessage) {
-      const systemMessage = generateSystemMessage(userProfile, isFirstMessage, userName);
-      console.log('System message for first interaction:', systemMessage);
-      messages = [
-        { role: "system", content: systemMessage },
-        { role: "user", content: `Greet ${userName} and ask how their ${getCurrentDay()} is going.` }
-      ];
+      messages.push({ role: "user", content: `start the conversation Sticks!` });
     } else {
       console.log('Chat history length:', chatHistory.length);
-      messages = chatHistory.map(msg => ({
+      messages = messages.concat(chatHistory.map(msg => ({
         role: msg.sender_id === null ? 'assistant' : 'user',
         content: msg.content
-      }));
+      })));
       messages.push({ role: "user", content: message });
     }
 
@@ -43,7 +43,7 @@ export async function processMessage(message, chatHistory = [], userProfile = {}
     let aiResponse = completion.choices[0].message.content;
 
     console.log('AI response:', aiResponse);
-
+    
     return {
       content: aiResponse,
       sender_id: null,
@@ -76,7 +76,7 @@ function generateSystemMessage(userProfile, isFirstMessage, userName) {
     .join('\n')
     : 'No profile information available.';
 
-  let systemMessage = `You are a helpful assistant. The current date is ${formattedDate}, and the time is ${formattedTime}.
+  let systemMessage = `You are Sticks, that is your name, reffer to yourself as Sticks, a helpful growth mindset coach/assistant. The current date is ${formattedDate}, and the time is ${formattedTime}.
 
 You are talking to a user named ${userName}. Here is some information about them:
 
