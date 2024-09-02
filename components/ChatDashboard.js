@@ -5,6 +5,7 @@ import ChatWindow from './ChatWindow';
 import MessageInput from './MessageInput';
 import FriendManagement from './FriendManagement';
 import AIChat from './AIChat';
+import io from 'socket.io-client';
 
 const ChatDashboard = () => {
   const [selectedChat, setSelectedChat] = useState(null);
@@ -17,12 +18,31 @@ const ChatDashboard = () => {
   const [chatToDelete, setChatToDelete] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [friends, setFriends] = useState([]);
+  const socket = io('http://localhost:5001'); // Ensure this URL matches your server URL
 
   useEffect(() => {
     fetchChats();
     fetchCurrentUser();
     fetchUserProfile();
     fetchFriends();
+
+    socket.on('newChat', (newChat) => {
+      setChats((prevChats) => [...prevChats, newChat]);
+    });
+
+    socket.on('connect', () => {
+      console.log('Connected to server');
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+    });
+
+    return () => {
+      socket.disconnect();
+      socket.off('connect');
+      socket.off('connect_error');
+    };
   }, []);
 
   useEffect(() => {
@@ -224,6 +244,9 @@ const ChatDashboard = () => {
         // Trigger a re-render of AIChat component
         setSelectedChat({...newChat});
       }
+
+      // Emit the new chat event to the server
+      socket.emit('createChat', { userId: currentUser.id, friendId, isAIChat });
     } catch (error) {
       console.error('Error starting new chat:', error);
       setError('Failed to start new chat. Please try again.');
@@ -315,6 +338,7 @@ const ChatDashboard = () => {
 
   const handleAddFriend = async (friendUsername) => {
     try {
+      console.log('Sending friend request for:', friendUsername);
       const response = await fetch('/api/friends/add', {
         method: 'POST',
         headers: {
@@ -324,16 +348,24 @@ const ChatDashboard = () => {
         credentials: 'include',
       });
 
+      const data = await response.json();
+      console.log('Response status:', response.status);
+      console.log('Response data:', data);
+
       if (response.ok) {
-        // Friend added successfully
+        console.log('Friend added successfully');
         fetchFriends(); // Refresh the friends list
+        setError(null); // Clear any previous errors
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to add friend');
+        console.error('Error adding friend:', data.error);
+        setError(data.error || 'Failed to add friend');
+        if (data.details) {
+          console.error('Error details:', data.details);
+        }
       }
     } catch (error) {
       console.error('Error adding friend:', error);
-      setError('An error occurred while adding friend');
+      setError('An unexpected error occurred');
     }
   };
 
@@ -381,10 +413,12 @@ const ChatDashboard = () => {
       </div>
       <div className={styles.friendManagement}>
         <FriendManagement 
-          friends={friends} 
+          friends={friends.filter(friend => friend.id !== currentUser?.id)}
           onAddFriend={handleAddFriend}
           onStartChat={(friendId) => handleStartNewChat(false, friendId)}
           onFriendsUpdate={fetchFriends}
+          currentUser={currentUser}
+          userProfile={userProfile}
         />
       </div>
       {showDeleteConfirmation && (

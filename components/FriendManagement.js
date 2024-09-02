@@ -14,16 +14,24 @@ const FriendManagement = ({ friends, onAddFriend, onStartChat, onFriendsUpdate, 
     }
   }, [currentUser]);
 
+  // Add this effect to refresh pending friends when the friends list updates
+  useEffect(() => {
+    fetchPendingFriends();
+  }, [friends]);
+
   const fetchPendingFriends = async () => {
     try {
       const response = await fetch('/api/friends/pending', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
+        console.log('Pending friends data:', data);
         setPendingFriends(data);
       } else if (response.status === 401) {
         console.error('Unauthorized access when fetching pending friends');
         router.push('/login');
       } else {
+        const errorData = await response.json();
+        console.error('Error fetching pending friends:', errorData);
         throw new Error(`Failed to fetch pending friends: ${response.status}`);
       }
     } catch (error) {
@@ -31,43 +39,89 @@ const FriendManagement = ({ friends, onAddFriend, onStartChat, onFriendsUpdate, 
     }
   };
 
-  const handleAddFriend = async (e) => {
-    e.preventDefault();
-    if (friendUsername.trim()) {
-      await onAddFriend(friendUsername);
-      setFriendUsername('');
-      setSearchResults([]);
-      onFriendsUpdate(); // Refresh the friends list after adding a new friend
+  const handleAddFriend = async (username) => {
+    if (username.trim()) {
+      try {
+        console.log('Sending friend request for:', username);
+        const response = await fetch('/api/friends/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ friendUsername: username }),
+          credentials: 'include',
+        });
+
+        console.log('Response received:', response.status);
+        const data = await response.json();
+
+        if (response.ok) {
+          console.log('Friend request sent successfully:', data.message);
+          onFriendsUpdate(); // Refresh the friends list
+          fetchPendingFriends(); // Refresh pending friends
+          setFriendUsername(''); // Clear the input after submitting
+          setSearchResults([]); // Clear search results
+        } else {
+          console.error('Error adding friend:', data.error);
+          // Handle specific error cases
+          if (response.status === 404) {
+            alert('User not found');
+          } else if (response.status === 400) {
+            alert(data.error);
+          } else if (response.status === 401) {
+            alert('Unauthorized. Please log in again.');
+            router.push('/login');
+          } else {
+            alert(`An error occurred while adding friend: ${data.error}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error in friend request:', error);
+        alert('An error occurred while processing your request. Please try again later.');
+      }
     }
   };
 
   const handleAcceptFriend = async (friendId) => {
     try {
-      const response = await fetch(`/api/friends/accept/${friendId}`, {
+      const response = await fetch(`/api/friends/accept`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requestId: friendId }),
         credentials: 'include',
       });
       if (response.ok) {
         fetchPendingFriends();
         onFriendsUpdate(); // Refresh the friends list after accepting a friend request
+      } else {
+        const errorData = await response.json();
+        console.error('Error accepting friend request:', errorData.error);
+        alert(`Failed to accept friend request: ${errorData.error}`);
       }
     } catch (error) {
       console.error('Error accepting friend request:', error);
+      alert('An error occurred while accepting the friend request. Please try again.');
     }
   };
 
   const handleSearch = async () => {
     if (friendUsername.trim()) {
       try {
-        const response = await fetch(`/api/users/search?term=${friendUsername}`, {
+        const response = await fetch(`/api/users/search?term=${encodeURIComponent(friendUsername)}`, {
           credentials: 'include',
         });
         if (response.ok) {
           const results = await response.json();
           setSearchResults(results);
+        } else {
+          console.error('Error searching users:', await response.text());
+          setSearchResults([]);
         }
       } catch (error) {
         console.error('Error searching users:', error);
+        setSearchResults([]);
       }
     } else {
       setSearchResults([]);
@@ -127,43 +181,44 @@ const FriendManagement = ({ friends, onAddFriend, onStartChat, onFriendsUpdate, 
     <div className={styles.friendManagement}>
       <h3>Friends</h3>
       <ul>
-        {friends.map((friend) => (
-          <li key={createUniqueKey(friend)}>
+        {friends.filter(friend => friend.id !== currentUser?.id).map((friend) => (
+          <li key={`friend-${friend.id}`}>
             {friend.username}
             <button onClick={() => onStartChat(friend.id, false)}>Chat</button>
           </li>
         ))}
       </ul>
-      <button onClick={() => onStartChat(null, true)}>Start AI Chat</button>
       <h3>Pending Friend Requests</h3>
       <ul>
         {pendingFriends.map((friend) => (
-          <li key={`pending-${createUniqueKey(friend)}`}>
-            {friend.username}
-            <button onClick={() => handleAcceptFriend(friend.id)}>Accept</button>
+          <li key={`pending-${friend.id}`}>
+            {friend.friend_username}
+            {friend.request_type === 'incoming' ? (
+              <button onClick={() => handleAcceptFriend(friend.id)}>Accept</button>
+            ) : (
+              <span> (Outgoing request)</span>
+            )}
           </li>
         ))}
       </ul>
-      <form onSubmit={handleAddFriend}>
+      <h3>Add Friend</h3>
+      <div>
         <input
           type="text"
           value={friendUsername}
           onChange={(e) => setFriendUsername(e.target.value)}
-          onKeyUp={handleSearch}
-          placeholder="Search for a friend"
+          placeholder="Enter friend's username"
         />
-        <button type="submit">Add Friend</button>
-      </form>
-      {searchResults.length > 0 && (
-        <ul className={styles.searchResults}>
-          {searchResults.map((user) => (
-            <li key={user.id}>
-              {user.username}
-              <button onClick={() => onAddFriend(user.username)}>Add</button>
-            </li>
-          ))}
-        </ul>
-      )}
+        <button onClick={handleSearch}>Search</button>
+      </div>
+      <ul>
+        {searchResults.filter(user => user.id !== currentUser?.id).map((user) => (
+          <li key={`search-${user.id}`}>
+            {user.username}
+            <button onClick={() => handleAddFriend(user.username)}>Add Friend</button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

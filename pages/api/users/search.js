@@ -10,11 +10,16 @@ export default async function handler(req, res) {
       }
 
       const { term } = req.query;
+      if (!term) {
+        return res.status(400).json({ error: 'Search term is required' });
+      }
+
       const result = await pool.query(
         'SELECT id, username FROM users WHERE username ILIKE $1 AND id != $2 LIMIT 10',
         [`%${term}%`, user.userId]
       );
 
+      console.log('Search results:', result.rows);
       res.status(200).json(result.rows);
     } catch (error) {
       console.error('Error searching users:', error);

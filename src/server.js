@@ -11,6 +11,7 @@ import relationshipRoutes from './routes/relationshipRoutes.js';
 import { authenticateToken } from './middleware/auth.js';
 import http from 'http';
 import { pool } from './db.js';
+import { Server } from 'socket.io';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -65,6 +66,52 @@ pool.query('SELECT current_database()', (err, res) => {
 });
 
 const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST']
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('a user connected');
+
+  socket.on('createChat', async (data) => {
+    try {
+      const { userId, friendId, isAIChat } = data;
+
+      // Create a new chat in the database
+      const chatResult = await pool.query(
+        'INSERT INTO chats (is_ai_chat) VALUES ($1) RETURNING *',
+        [isAIChat]
+      );
+      const newChat = chatResult.rows[0];
+
+      // Add the user as a participant
+      await pool.query(
+        'INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2)',
+        [newChat.id, userId]
+      );
+
+      if (!isAIChat && friendId) {
+        // Add the friend as a participant
+        await pool.query(
+          'INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2)',
+          [newChat.id, friendId]
+        );
+      }
+
+      // Emit the new chat event to the client
+      io.emit('newChat', newChat);
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('user disconnected');
+  });
+});
 
 server.timeout = 300000; // Increase to 5 minutes (300000 ms)
 

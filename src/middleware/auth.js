@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { pool } from '../db';
+import { pool } from '../db.js';
 
 export const authenticateToken = (req) => {
   return new Promise((resolve) => {
