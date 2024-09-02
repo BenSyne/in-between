@@ -20,7 +20,7 @@ export async function processMessage(message, chatHistory = [], userProfile = {}
       console.log('System message for first interaction:', systemMessage);
       messages = [
         { role: "system", content: systemMessage },
-        { role: "user", content: "Start a new conversation" }
+        { role: "user", content: `Greet ${userName} and ask how their ${getCurrentDay()} is going.` }
       ];
     } else {
       console.log('Chat history length:', chatHistory.length);
@@ -34,7 +34,7 @@ export async function processMessage(message, chatHistory = [], userProfile = {}
     console.log('Sending messages to OpenAI:', JSON.stringify(messages, null, 2));
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-0613",
+      model: "gpt-4o-mini",
       messages: messages,
     });
 
@@ -101,6 +101,10 @@ Important instructions:
   }
 
   return systemMessage;
+}
+
+function getCurrentDay() {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long' });
 }
 
 export async function enhanceMessage(content, userProfile = {}) {

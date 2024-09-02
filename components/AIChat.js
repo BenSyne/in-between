@@ -6,15 +6,16 @@ import styles from '../styles/AIChat.module.css'
 const AIChat = ({ chatId, onSendMessage, initialMessages, currentUser }) => {
   const [messages, setMessages] = useState(initialMessages);
   const [isAITyping, setIsAITyping] = useState(false);
+  const [initialMessageSent, setInitialMessageSent] = useState(false);
 
   useEffect(() => {
-    setMessages(initialMessages);
-    if (initialMessages.length === 0) {
+    if (initialMessages.length === 0 && !isAITyping && !initialMessageSent) {
       handleFirstAIMessage();
     }
-  }, [initialMessages, chatId]);
+  }, [initialMessages, chatId, initialMessageSent]);
 
-  const handleFirstAIMessage = async () => {
+  const handleFirstAIMessage = async (retryCount = 0) => {
+    if (isAITyping || initialMessageSent) return;
     setIsAITyping(true);
     try {
       const response = await fetch('/api/ai-chat', {
@@ -22,17 +23,36 @@ const AIChat = ({ chatId, onSendMessage, initialMessages, currentUser }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chatId, message: '', isFirstMessage: true }),
       });
-      if (!response.ok) {
-        throw new Error('Failed to fetch first AI message');
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+      
+      if (response.status === 429 && retryCount < 3) {
+        console.log(`Retrying in ${(retryCount + 1) * 1000}ms...`);
+        setTimeout(() => handleFirstAIMessage(retryCount + 1), (retryCount + 1) * 1000);
+        return;
       }
-      const data = await response.json();
-      if (data.aiMessage && data.aiMessage.content) {
-        setMessages([data.aiMessage]);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch first AI message: ${response.status} ${responseText}`);
+      }
+      
+      const data = JSON.parse(responseText);
+      console.log('Parsed data:', data);
+      
+      if (data.aiMessage && data.aiMessage.content && data.aiMessage.sent_at) {
+        const aiMessage = {
+          ...data.aiMessage,
+          sent_at: new Date(data.aiMessage.sent_at).toISOString()
+        };
+        console.log('Processed AI message:', aiMessage);
+        setMessages([aiMessage]);
+        setInitialMessageSent(true);
       } else {
         throw new Error('Invalid AI message received');
       }
     } catch (error) {
-      console.error('Error fetching first AI message:', error);
+      console.error('Error in handleFirstAIMessage:', error);
       setMessages([{ content: "I'm sorry, I'm having trouble connecting. Please try again later.", sender_id: null, sender_username: 'AI', sent_at: new Date().toISOString() }]);
     } finally {
       setIsAITyping(false);
