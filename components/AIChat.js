@@ -61,6 +61,17 @@ const AIChat = ({ chatId, onSendMessage, initialMessages, currentUser }) => {
   };
 
   const handleSendMessage = async (content) => {
+    if (!currentUser) {
+      console.error('User not authenticated');
+      setMessages(prevMessages => [...prevMessages, {
+        content: "You are not authenticated. Please log in and try again.",
+        sender_id: null,
+        sender_username: 'System',
+        sent_at: new Date().toISOString()
+      }]);
+      return;
+    }
+
     const userMessage = { content, sender_id: currentUser.id, sender_username: currentUser.username, sent_at: new Date().toISOString() };
     setMessages(prevMessages => [...prevMessages, userMessage]);
     setIsAITyping(true);
@@ -68,10 +79,17 @@ const AIChat = ({ chatId, onSendMessage, initialMessages, currentUser }) => {
     try {
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}` // Add this line
+        },
         body: JSON.stringify({ chatId, message: content, isFirstMessage: false }),
         credentials: 'include',
       });
+
+      if (response.status === 401) {
+        throw new Error('Unauthorized: Please log in again.');
+      }
 
       if (!response.ok) {
         throw new Error('Failed to send message');
@@ -85,6 +103,12 @@ const AIChat = ({ chatId, onSendMessage, initialMessages, currentUser }) => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      setMessages(prevMessages => [...prevMessages, {
+        content: error.message || "An error occurred while sending the message.",
+        sender_id: null,
+        sender_username: 'System',
+        sent_at: new Date().toISOString()
+      }]);
     } finally {
       setIsAITyping(false);
     }

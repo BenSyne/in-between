@@ -1,5 +1,6 @@
 import { pool } from '../../../src/db';
 import { authenticateToken } from '../../../src/middleware/auth';
+import { io } from '../../../src/server.js';
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
@@ -20,7 +21,11 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Friend request not found' });
       }
 
+      io.to(`user_${result.rows[0].user1_id}`).emit('friendRequestAccepted', { friendId: user.userId, username: user.username });
+      io.to(`user_${user.userId}`).emit('friendRequestAccepted', { friendId: result.rows[0].user1_id, username: result.rows[0].username });
+
       res.status(200).json({ message: 'Friend request accepted' });
+
     } catch (error) {
       console.error('Error accepting friend request:', error);
       res.status(500).json({ error: 'Error accepting friend request' });

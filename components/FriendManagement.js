@@ -1,84 +1,69 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import styles from '../styles/FriendManagement.module.css';
+import io from 'socket.io-client';
 
-const FriendManagement = ({ friends, onAddFriend, onStartChat, onFriendsUpdate, currentUser, userProfile }) => {
+const FriendManagement = ({ friends, onAddFriend, onStartChat, onFriendsUpdate, currentUser, userProfile, pendingFriends, socket }) => {
   const [friendUsername, setFriendUsername] = useState('');
-  const [pendingFriends, setPendingFriends] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const router = useRouter();
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchPendingFriends();
-    }
-  }, [currentUser]);
-
-  // Add this effect to refresh pending friends when the friends list updates
-  useEffect(() => {
-    fetchPendingFriends();
-  }, [friends]);
-
-  const fetchPendingFriends = async () => {
+  const checkServerHealth = async () => {
     try {
-      const response = await fetch('/api/friends/pending', { credentials: 'include' });
+      const response = await fetch('http://localhost:5001/health');
       if (response.ok) {
-        const data = await response.json();
-        console.log('Pending friends data:', data);
-        setPendingFriends(data);
-      } else if (response.status === 401) {
-        console.error('Unauthorized access when fetching pending friends');
-        router.push('/login');
-      } else {
-        const errorData = await response.json();
-        console.error('Error fetching pending friends:', errorData);
-        throw new Error(`Failed to fetch pending friends: ${response.status}`);
+        console.log('Server is healthy');
+        return true;
       }
     } catch (error) {
-      console.error('Error fetching pending friends:', error);
+      console.error('Server health check failed:', error);
     }
+    return false;
   };
 
+  useEffect(() => {
+    if (socket && currentUser) {
+      socket.emit('joinUser', currentUser.id);
+
+      socket.on('newFriendRequest', (request) => {
+        console.log('New friend request received:', request);
+        onFriendsUpdate();
+      });
+
+      socket.on('friendRequestAccepted', (data) => {
+        console.log('Friend request accepted:', data);
+        onFriendsUpdate();
+      });
+
+      return () => {
+        socket.off('newFriendRequest');
+        socket.off('friendRequestAccepted');
+      };
+    }
+  }, [socket, currentUser]);
+
   const handleAddFriend = async (username) => {
-    if (username.trim()) {
-      try {
-        console.log('Sending friend request for:', username);
-        const response = await fetch('/api/friends/add', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ friendUsername: username }),
-          credentials: 'include',
-        });
+    try {
+      const response = await fetch('/api/friends/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ friendUsername: username }),
+      });
 
-        console.log('Response received:', response.status);
-        const data = await response.json();
-
-        if (response.ok) {
-          console.log('Friend request sent successfully:', data.message);
-          onFriendsUpdate(); // Refresh the friends list
-          fetchPendingFriends(); // Refresh pending friends
-          setFriendUsername(''); // Clear the input after submitting
-          setSearchResults([]); // Clear search results
-        } else {
-          console.error('Error adding friend:', data.error);
-          // Handle specific error cases
-          if (response.status === 404) {
-            alert('User not found');
-          } else if (response.status === 400) {
-            alert(data.error);
-          } else if (response.status === 401) {
-            alert('Unauthorized. Please log in again.');
-            router.push('/login');
-          } else {
-            alert(`An error occurred while adding friend: ${data.error}`);
-          }
-        }
-      } catch (error) {
-        console.error('Error in friend request:', error);
-        alert('An error occurred while processing your request. Please try again later.');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add friend');
       }
+
+      const data = await response.json();
+      console.log('Friend request sent:', data);
+      onFriendsUpdate();
+    } catch (error) {
+      console.error('Error adding friend:', error);
+      // Handle the error (e.g., show an error message to the user)
     }
   };
 
@@ -93,8 +78,9 @@ const FriendManagement = ({ friends, onAddFriend, onStartChat, onFriendsUpdate, 
         credentials: 'include',
       });
       if (response.ok) {
-        fetchPendingFriends();
-        onFriendsUpdate(); // Refresh the friends list after accepting a friend request
+        socket.current.emit('acceptFriendRequest', { friendId });
+        setPendingFriends(prevPending => prevPending.filter(friend => friend.id !== friendId));
+        onFriendsUpdate();
       } else {
         const errorData = await response.json();
         console.error('Error accepting friend request:', errorData.error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styles from '../styles/ChatDashboard.module.css';
 import UserList from './UserList';
 import ChatWindow from './ChatWindow';
@@ -7,43 +7,120 @@ import FriendManagement from './FriendManagement';
 import AIChat from './AIChat';
 import io from 'socket.io-client';
 
-const ChatDashboard = () => {
+const ChatDashboard = ({ socket, currentUser, token }) => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [error, setError] = useState(null);
   const [isAITyping, setIsAITyping] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [chatToDelete, setChatToDelete] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [friends, setFriends] = useState([]);
-  const socket = io('http://localhost:5001'); // Ensure this URL matches your server URL
+  const [pendingFriends, setPendingFriends] = useState([]);
 
   useEffect(() => {
-    fetchChats();
-    fetchCurrentUser();
-    fetchUserProfile();
-    fetchFriends();
+    console.log('ChatDashboard mounted, currentUser:', currentUser);
+    if (currentUser) {
+      fetchInitialData();
+    }
+  }, [currentUser]);
 
-    socket.on('newChat', (newChat) => {
-      setChats((prevChats) => [...prevChats, newChat]);
-    });
+  const fetchInitialData = async () => {
+    console.log('Fetching initial data...');
+    try {
+      const [chatsResponse, friendsResponse, pendingFriendsResponse] = await Promise.all([
+        fetch('/api/chats', { 
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include' 
+        }),
+        fetch('/api/friends', { 
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include' 
+        }),
+        fetch('/api/friends/pending', { 
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include' 
+        })
+      ]);
 
-    socket.on('connect', () => {
-      console.log('Connected to server');
-    });
+      console.log('Chats response status:', chatsResponse.status);
+      console.log('Friends response status:', friendsResponse.status);
+      console.log('Pending friends response status:', pendingFriendsResponse.status);
 
-    socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
-    });
+      if (!chatsResponse.ok || !friendsResponse.ok || !pendingFriendsResponse.ok) {
+        throw new Error('One or more API requests failed');
+      }
+
+      const [chatsData, friendsData, pendingFriendsData] = await Promise.all([
+        chatsResponse.json(),
+        friendsResponse.json(),
+        pendingFriendsResponse.json()
+      ]);
+
+      console.log('Chats data:', chatsData);
+      console.log('Friends data:', friendsData);
+      console.log('Pending friends data:', pendingFriendsData);
+
+      setChats(chatsData);
+      setFriends(friendsData);
+      setPendingFriends(pendingFriendsData);
+    } catch (error) {
+      console.error('Error fetching initial data:', error);
+      setError('Failed to load initial data. Please refresh the page and try again.');
+    }
+  };
+
+  useEffect(() => {
+    const setupSocket = async () => {
+      const isServerHealthy = await checkServerHealth();
+      if (isServerHealthy) {
+        socket.on('connect', () => {
+          console.log('Socket connected successfully');
+          if (currentUser) {
+            console.log(`Emitting joinUser event for user ${currentUser.id}`);
+            socket.emit('joinUser', currentUser.id);
+          }
+        });
+
+        socket.on('connect_error', (error) => {
+          console.error('Socket connection error:', error);
+        });
+
+        socket.on('reconnect_failed', () => {
+          console.error('Failed to reconnect to the server');
+          setError('Failed to reconnect to the server. Please refresh the page.');
+        });
+
+        socket.on('newMessage', (message) => {
+          setMessages(prevMessages => [...prevMessages, message]);
+        });
+
+        socket.on('newChat', (newChat) => {
+          setChats(prevChats => [...prevChats, newChat]);
+        });
+
+        socket.on('newFriendRequest', (request) => {
+          setPendingFriends(prevPending => [...prevPending, request]);
+        });
+
+        socket.on('friendRequestAccepted', (friendId) => {
+          setFriends(prevFriends => [...prevFriends, friendId]);
+          setPendingFriends(prevPending => prevPending.filter(req => req.id !== friendId));
+        });
+      } else {
+        console.error('Server is not healthy, cannot initialize socket');
+      }
+    };
+
+    setupSocket();
 
     return () => {
-      socket.disconnect();
-      socket.off('connect');
-      socket.off('connect_error');
+      if (socket.connected) {
+        socket.disconnect();
+      }
     };
-  }, []);
+  }, [socket, currentUser]);
 
   useEffect(() => {
     if (selectedChat) {
@@ -51,69 +128,26 @@ const ChatDashboard = () => {
     }
   }, [selectedChat]);
 
-  useEffect(() => {
-    console.log('ChatDashboard - currentUser:', currentUser);
-    console.log('ChatDashboard - messages:', messages);
-    console.log('ChatDashboard - selectedChat:', selectedChat);
-  }, [currentUser, messages, selectedChat]);
-
-  const fetchChats = async () => {
+  const checkServerHealth = async () => {
     try {
-      console.log('Fetching chats...');
-      const response = await fetch('/api/chats', { 
+      const response = await fetch('http://localhost:5001/health', {
         method: 'GET',
-        credentials: 'include' 
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
       });
-      console.log('Fetch response:', response.status, response.statusText);
       if (response.ok) {
-        const data = await response.json();
-        console.log('Fetched chats:', data);
-        setChats(data);
+        console.log('Server is healthy');
+        return true;
       } else {
-        const errorData = await response.json();
-        console.error('Error fetching chats:', errorData);
-        throw new Error(errorData.error || 'Failed to fetch chats');
+        console.error('Server health check failed:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Error fetching chats:', error);
-      setError('Failed to load chats. Please try again.');
+      console.error('Server health check failed:', error);
     }
-  };
-
-  const fetchCurrentUser = async () => {
-    try {
-      const response = await fetch('/api/users/profile', { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentUser(data);
-      } else if (response.status === 404) {
-        console.error('User profile not found. Redirecting to login.');
-        // Redirect to login page or show a message to the user
-      } else {
-        throw new Error('Failed to fetch current user');
-      }
-    } catch (error) {
-      console.error('Error fetching current user:', error);
-      setError('Failed to load user profile. Please try again.');
-    }
-  };
-
-  const fetchUserProfile = async () => {
-    try {
-      const response = await fetch('/api/users/profile', { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        setUserProfile(data);
-      } else if (response.status === 404) {
-        console.error('User profile not found. Redirecting to profile creation.');
-        // Redirect to profile creation page or show a message to the user
-      } else {
-        throw new Error('Failed to fetch user profile');
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      setError('Failed to load user profile. Please try again.');
-    }
+    return false;
   };
 
   const fetchMessages = async () => {
@@ -139,86 +173,52 @@ const ChatDashboard = () => {
     }
   };
 
-  const fetchFriends = async () => {
-    try {
-      const response = await fetch('/api/friends', { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        setFriends(data);
-      } else {
-        throw new Error('Failed to fetch friends');
-      }
-    } catch (error) {
-      console.error('Error fetching friends:', error);
-      setError('Failed to load friends. Please try again.');
-    }
-  };
-
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
   };
 
   const handleSendMessage = async (content) => {
-    if (!selectedChat) return;
+    if (!selectedChat || !currentUser) {
+      setError('Cannot send message. Please select a chat and ensure you are logged in.');
+      return;
+    }
 
     try {
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chatId: selectedChat.id,
-          content: content,
-          isAIChat: selectedChat.is_ai_chat,
-        }),
-        credentials: 'include',
-      });
+      const newMessage = {
+        chatId: selectedChat.id,
+        content: content,
+        senderId: currentUser.id,
+      };
 
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
+      socket.emit('sendMessage', newMessage);
 
-      const data = await response.json();
-      console.log('Message sent, received data:', data);
-
-      setMessages(prevMessages => [...prevMessages, data.userMessage]);
-
-      if (selectedChat.is_ai_chat && data.aiMessage) {
-        setIsAITyping(true);
-        // Simulate AI typing delay
-        setTimeout(() => {
-          setMessages(prevMessages => [...prevMessages, data.aiMessage]);
-          setIsAITyping(false);
-        }, 1000);
-      }
-
-      // Handle new tokens if they were generated
-      if (data.newTokens) {
-        // Update your client-side auth state with the new tokens
-        // This depends on how you're managing auth state in your app
-        updateAuthTokens(data.newTokens);
-      }
+      setMessages(prevMessages => [...prevMessages, {
+        ...newMessage,
+        sent_at: new Date().toISOString(),
+        sender_username: currentUser.username,
+      }]);
     } catch (error) {
       console.error('Error sending message:', error);
       setError('Failed to send message. Please try again.');
     }
   };
 
-  // Add this function to update your auth state
   const updateAuthTokens = (newTokens) => {
-    // Update your client-side auth state
-    // This could involve storing the new tokens in localStorage, 
-    // updating a global state, or whatever method you're using for auth
     console.log('Updating auth tokens:', newTokens);
   };
 
   const handleStartNewChat = async (isAIChat, friendId = null) => {
     try {
+      if (!currentUser) {
+        setError('User not authenticated. Please log in.');
+        return;
+      }
+
       const response = await fetch('/api/chats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ is_ai_chat: isAIChat, friend_id: friendId }),
         credentials: 'include',
@@ -233,19 +233,14 @@ const ChatDashboard = () => {
       setSelectedChat(newChat);
       setMessages([]);
 
-      // Reset the AI typing state
       setIsAITyping(false);
 
-      // Clear any previous error
       setError(null);
 
-      // If it's an AI chat, the AIChat component will handle the first message
       if (isAIChat) {
-        // Trigger a re-render of AIChat component
         setSelectedChat({...newChat});
       }
 
-      // Emit the new chat event to the server
       socket.emit('createChat', { userId: currentUser.id, friendId, isAIChat });
     } catch (error) {
       console.error('Error starting new chat:', error);
@@ -354,8 +349,8 @@ const ChatDashboard = () => {
 
       if (response.ok) {
         console.log('Friend added successfully');
-        fetchFriends(); // Refresh the friends list
-        setError(null); // Clear any previous errors
+        onFriendsUpdate(); // Use the prop function instead of fetching all data again
+        setError(null);
       } else {
         console.error('Error adding friend:', data.error);
         setError(data.error || 'Failed to add friend');
@@ -365,7 +360,7 @@ const ChatDashboard = () => {
       }
     } catch (error) {
       console.error('Error adding friend:', error);
-      setError('An unexpected error occurred');
+      setError('An unexpected error occurred. Please try again later.');
     }
   };
 
@@ -416,9 +411,11 @@ const ChatDashboard = () => {
           friends={friends.filter(friend => friend.id !== currentUser?.id)}
           onAddFriend={handleAddFriend}
           onStartChat={(friendId) => handleStartNewChat(false, friendId)}
-          onFriendsUpdate={fetchFriends}
+          onFriendsUpdate={fetchInitialData}
           currentUser={currentUser}
           userProfile={userProfile}
+          pendingFriends={pendingFriends}
+          socket={socket}
         />
       </div>
       {showDeleteConfirmation && (

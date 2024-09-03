@@ -1,5 +1,6 @@
 import { pool } from '../../../src/db';
 import { authenticateToken } from '../../../src/middleware/auth';
+import { io } from '../../../src/server.js';
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
@@ -12,6 +13,9 @@ export default async function handler(req, res) {
       }
 
       const { friendUsername } = req.body;
+      if (!friendUsername) {
+        return res.status(400).json({ error: 'Friend username is required' });
+      }
       console.log('Adding friend:', friendUsername);
 
       if (friendUsername === user.username) {
@@ -61,6 +65,21 @@ export default async function handler(req, res) {
         message: 'Friend request sent successfully',
         friendship: newFriendship.rows[0]
       });
+
+      // Emit the new friend request event
+      console.log('Attempting to emit newFriendRequest event');
+      if (io) {
+        console.log(`Emitting newFriendRequest event to user_${friendId}`);
+        io.to(`user_${friendId}`).emit('newFriendRequest', {
+          id: newFriendship.rows[0].id,
+          user1_id: user.userId,
+          user2_id: friendId,
+          status: 'pending'
+        });
+        console.log('newFriendRequest event emitted');
+      } else {
+        console.error('Socket.io not initialized');
+      }
     } catch (error) {
       console.error('Error adding friend:', error);
       res.status(500).json({ error: 'Internal server error', details: error.message });
